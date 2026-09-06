@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>七尾中特</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 5px;
+            background-color: #fff;
+            color: #000;
+        }
+        .content {
+            font-size: 16px;
+        }
+        .win-digit {
+            color: #FF0000;
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+
+<div id="content-container" class="content"></div>
+
+<script>
+    const SPREADSHEET_ID = '19wtMwveTJ_eW09pp7ANQj1NkLNbHIA4kWLsoNAk5Xd8';
+    const SHEET_NAME_KQ = 'KQ_XIANGGANG';
+    const SHEET_NAME_DULIEU = 'DULIEU';
+
+    const URL_KQ = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_KQ}&_=${Date.now()}`;
+    const URL_DULIEU = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_DULIEU}&_=${Date.now()}`;
+
+    let duLieuMapB = {};
+    let duLieuMapE = {};
+
+    // 366 kỳ dự đoán cố định (7 đuôi số - đã bỏ chữ 尾)
+    const PREDICT_366 = {
+        1: "2356789", 2: "0123457", 3: "1234568", 4: "2345689", 5: "0123457", 6: "1234578", 7: "2456789", 8: "0123467", 9: "1245678", 10: "2456789",
+        11: "0123467", 12: "1245678", 13: "3456789", 14: "0123457", 15: "2345678", 16: "1236789", 17: "0123567", 18: "2345678", 19: "1456789", 20: "0123457",
+        21: "2345678", 22: "1256789", 23: "0123467", 24: "2345678", 25: "3456789", 26: "0134567", 27: "1245678", 28: "3456789", 29: "0123456", 30: "1234578",
+        31: "2345789", 32: "0123467", 33: "1234678", 34: "3456789", 35: "0123567", 36: "1235678", 37: "3456789", 38: "0124567", 39: "1235678", 40: "3456789",
+        41: "0123456", 42: "1234567", 43: "2345789", 44: "0123456", 45: "1234567", 46: "2345689", 47: "0123456", 48: "1234568", 49: "2356789", 50: "0123457",
+        51: "1234678", 52: "3456789", 53: "0123467", 54: "1234578", 55: "2356789", 56: "0123457", 57: "1235678", 58: "2346789", 59: "0123457", 60: "1234568",
+        61: "2356789", 62: "0123457", 63: "1245678", 64: "3456789", 65: "0123456", 66: "1235678", 67: "2356789", 68: "0123457", 69: "1234568", 70: "2356789",
+        71: "0123457", 72: "1234678", 73: "2356789", 74: "0123456", 75: "1235678", 76: "2346789", 77: "0123567", 78: "1234678", 79: "2456789", 80: "0123456",
+        81: "1345678", 82: "3456789", 83: "0123567", 84: "2345678", 85: "1236789", 86: "0124567", 87: "2345678", 88: "1456789", 89: "0123567", 90: "2345678",
+        91: "1236789", 92: "0123467", 93: "2345678", 94: "1256789", 95: "0123457", 96: "2345678", 97: "1234569", 98: "0123456", 99: "0124579", 100: "0123459",
+        101: "0234789", 102: "1345678", 103: "0234578", 104: "3456789", 105: "0123789", 106: "1235678", 107: "2345789", 108: "0123467", 109: "1234678", 110: "2346789",
+        111: "0123457", 112: "1234568", 113: "2356789", 114: "0123456", 115: "1234568", 116: "2345679", 117: "0123457", 118: "1234568", 119: "2345789", 120: "0123456",
+        121: "1234678", 122: "2356789", 123: "0123567", 124: "1234678", 125: "2345789", 126: "0123457", 127: "1234678", 128: "2356789", 129: "0123567", 130: "1234678",
+        131: "2356789", 132: "0123567", 133: "1235678", 134: "3456789", 135: "0123456", 136: "1234578", 137: "2346789", 138: "0123456", 139: "1234568", 140: "2345789",
+        141: "0123457", 142: "1234568", 143: "2356789", 144: "0123457", 145: "1235678", 146: "3456789", 147: "0123456", 148: "1234678", 149: "2346789", 150: "0123456",
+        151: "1234578", 152: "2346789", 153: "0123457", 154: "1234678", 155: "3456789", 156: "0123457", 157: "1245678", 158: "3456789", 159: "0123467", 160: "1234678",
+        161: "2456789", 162: "0123457", 163: "1245678", 164: "2356789", 165: "0124567", 166: "1235678", 167: "2456789", 168: "0124567", 169: "1345678", 170: "3456789",
+        171: "0123457", 172: "2345678", 173: "1256789", 174: "0123467", 175: "2345678", 176: "1236789", 177: "0123457", 178: "2345678", 179: "1256789", 180: "0123456",
+        181: "2345678", 182: "1234589", 183: "0123456", 184: "2345678", 185: "1456789", 186: "0134567", 187: "2345678", 188: "1456789", 189: "0123467", 190: "2345678",
+        191: "3456789", 192: "0134567", 193: "1245678", 194: "3456789", 195: "0123457", 196: "1235678", 197: "2356789", 198: "0123456", 199: "1235678", 200: "2356789",
+        201: "0123456", 202: "1234568", 203: "0134578", 204: "0123456", 205: "0123456", 206: "1234678", 207: "0123467", 208: "0123458", 209: "1345679", 210: "0123456",
+        211: "0123468", 212: "1234679", 213: "0123467", 214: "0123458", 215: "1234589", 216: "0124568", 217: "0123467", 218: "1235679", 219: "0123456", 220: "0123468",
+        221: "1234679", 222: "0123457", 223: "0124567", 224: "1236789", 225: "0123489", 226: "0123568", 227: "0123479", 228: "0123456", 229: "1234568", 230: "0123457",
+        231: "0123457", 232: "1234569", 233: "0123456", 234: "0123467", 235: "1234578", 236: "0123457", 237: "0123456", 238: "1234568", 239: "0123457", 240: "2345679",
+        241: "1234568", 242: "0123456", 243: "0123457", 244: "1234579", 245: "0123457", 246: "0123456", 247: "1235789", 248: "0123689", 249: "0123456", 250: "1234567",
+        251: "0123457", 252: "2345678", 253: "1234569", 254: "0123456", 255: "0123456", 256: "1234567", 257: "0123456", 258: "1234578", 259: "0123578", 260: "0123567",
+        261: "1234579", 262: "0123457", 263: "0123458", 264: "1234579", 265: "0123467", 266: "0134568", 267: "1245679", 268: "0123456", 269: "0124567", 270: "1235678",
+        271: "0123457", 272: "0123468", 273: "1234589", 274: "0123458", 275: "0123456", 276: "1234569", 277: "0123569", 278: "0123456", 279: "1245678", 280: "0123456",
+        281: "0123459", 282: "1234568", 283: "0123467", 284: "0123457", 285: "1234578", 286: "0123469", 287: "0123567", 288: "1234678", 289: "0123457", 290: "0123457",
+        291: "1234569", 292: "0123456", 293: "0123457", 294: "1234678", 295: "0123457", 296: "0123456", 297: "1234568", 298: "0124568", 299: "0123457", 300: "1236789",
+        301: "2346789", 302: "1235678", 303: "0123456", 304: "2356789", 305: "1235678", 306: "0123457", 307: "2356789", 308: "1245678", 309: "0123457", 310: "2356789",
+        311: "1234578", 312: "0123467", 313: "2345689", 314: "1234578", 315: "0123467", 316: "2456789", 317: "1234678", 318: "0123567", 319: "2346789", 320: "1234678",
+        321: "0123467", 322: "2345789", 323: "1234578", 324: "0123457", 325: "3456789", 326: "1234678", 327: "0123456", 328: "2345789", 329: "1234578", 330: "0123456",
+        331: "2345789", 332: "1234678", 333: "0123456", 334: "3456789", 335: "1234678", 336: "0123457", 337: "3456789", 338: "1345678", 339: "0123457", 340: "2456789",
+        341: "1345678", 342: "0124567", 343: "2456789", 344: "1235678", 345: "0123457", 346: "2356789", 347: "1234568", 348: "0123456", 349: "3456789", 350: "1345678",
+        351: "0134567", 352: "3456789", 353: "2345678", 354: "0124567", 355: "3456789", 356: "2345678", 357: "0124567", 358: "3456789", 359: "1235678", 360: "0123457",
+        361: "2346789", 362: "1235678", 363: "0123456", 364: "2356789", 365: "1245678", 366: "0123457"
+    };
+
+    function fetchJSONP(url) {
+        return fetch(url)
+            .then(res => res.text())
+            .then(text => {
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+                if (match && match[1]) return JSON.parse(match[1]);
+                throw new Error("Tải dữ liệu thất bại");
+            });
+    }
+
+    function getPredictForKy(kyNum) {
+        let key = ((kyNum - 1) % 366) + 1;
+        return PREDICT_366[key];
+    }
+
+    function formatTwoDigits(val) {
+        let cleanVal = String(val).trim();
+        let num = parseInt(cleanVal.replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '';
+        return String(num).padStart(2, '0');
+    }
+
+    function formatThreeDigits(val) {
+        let num = parseInt(String(val).replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '001';
+        return String(num).padStart(3, '0');
+    }
+
+    // Hàm chuyển đổi chuỗi số thành dạng phân tách bằng dấu chấm: 2356789 -> 2.3.5.6.7.8.9
+    function formatPredictString(predictedStr) {
+        return predictedStr.split('').join('.');
+    }
+
+    // Hàm định dạng số trúng: Chữ số trúng sẽ bôi vàng + chữ đỏ
+    function formatWinText(predictedStr, hitTail) {
+        let digits = predictedStr.split('');
+        let formattedDigits = digits.map(char => {
+            if (char === hitTail) {
+                return `<span class="win-digit">${char}</span>`;
+            }
+            return char;
+        });
+
+        return formattedDigits.join('.');
+    }
+
+    async function initPredict() {
+        try {
+            const rawRules = await fetchJSONP(URL_DULIEU);
+            if (rawRules.table && rawRules.table.rows) {
+                rawRules.table.rows.forEach(r => {
+                    if (r.c && r.c[0] && r.c[0].v !== null && r.c[0].v !== undefined) {
+                        let formattedNum = formatTwoDigits(r.c[0].v);
+                        let animalB = (r.c[1] && r.c[1].v !== null && r.c[1].v !== undefined) ? String(r.c[1].v).trim() : '';
+                        let animalE = (r.c[4] && r.c[4].v !== null && r.c[4].v !== undefined) ? String(r.c[4].v).trim() : '';
+                        
+                        if (formattedNum) {
+                            if (animalB) duLieuMapB[formattedNum] = animalB;
+                            if (animalE) duLieuMapE[formattedNum] = animalE;
+                        }
+                    }
+                });
+            }
+
+            const rawKQ = await fetchJSONP(URL_KQ);
+            const rows = rawKQ.table.rows;
+            let parsedList = [];
+            let lastXRowIndex = -1;
+
+            if (rows) {
+                for (let i = 0; i < rows.length; i++) {
+                    const r = rows[i].c;
+                    if (!r) continue;
+
+                    let isXRow = false;
+                    for (let colIdx = 1; colIdx <= 7; colIdx++) {
+                        if (r[colIdx] && r[colIdx].v !== null && r[colIdx].v !== undefined) {
+                            if (String(r[colIdx].v).trim().toLowerCase() === 'x') {
+                                isXRow = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isXRow) {
+                        lastXRowIndex = i;
+                        continue;
+                    }
+
+                    if (!r[0] || r[0].v === null || r[0].v === undefined) continue;
+
+                    let kyRaw = String(r[0].v).trim();
+                    let kyOnlyNum = parseInt(kyRaw.replace(/\D/g, ''), 10) || 0;
+                    
+                    let numTeFormatted = '';
+                    if (r[7] && r[7].v !== null && r[7].v !== undefined) {
+                        let valStr = String(r[7].v).trim();
+                        if (valStr !== '' && valStr !== '0' && valStr !== '00') {
+                            numTeFormatted = formatTwoDigits(valStr);
+                        }
+                    }
+
+                    if (kyOnlyNum > 0) {
+                        parsedList.push({
+                            rowIndex: i,
+                            kyNum: kyOnlyNum,
+                            numTe: numTeFormatted
+                        });
+                    }
+                }
+            }
+
+            let doneList = [];
+            let pendingKyObj = null;
+
+            for (let i = 0; i < parsedList.length; i++) {
+                let item = parsedList[i];
+                let isDone = item.numTe !== '' && item.numTe !== '00';
+                if (isDone) {
+                    item.useMapE = (lastXRowIndex !== -1 && item.rowIndex > lastXRowIndex);
+                    doneList.push(item);
+                } else {
+                    pendingKyObj = item;
+                }
+            }
+
+            let targetPredictKy = 1;
+            if (pendingKyObj) {
+                targetPredictKy = pendingKyObj.kyNum;
+            } else if (doneList.length > 0) {
+                targetPredictKy = doneList[doneList.length - 1].kyNum + 1;
+            }
+
+            let winEntries = [];
+            let consecutiveLosses = 0;
+
+            for (let i = doneList.length - 1; i >= 0; i--) {
+                let item = doneList[i];
+                let predictedChoice = getPredictForKy(item.kyNum);
+                
+                let activeMap = item.useMapE ? duLieuMapE : duLieuMapB;
+                let actualShengXiao = activeMap[item.numTe] || duLieuMapB[item.numTe] || '';
+
+                let numVal = parseInt(item.numTe, 10);
+                let lastDigit = item.numTe.slice(-1);
+
+                let isWin = false;
+                if (!isNaN(numVal) && numVal >= 1 && numVal <= 49) {
+                    if (predictedChoice.includes(lastDigit)) {
+                        isWin = true;
+                    }
+                }
+
+                if (isWin) {
+                    consecutiveLosses = 0;
+                    winEntries.push({ 
+                        item, 
+                        predicted: predictedChoice, 
+                        hitTail: lastDigit,
+                        shengXiaoWin: actualShengXiao 
+                    });
+                    if (winEntries.length === 14) {
+                        break;
+                    }
+                } else {
+                    consecutiveLosses++;
+                    if (consecutiveLosses >= 3) {
+                        break;
+                    }
+                }
+            }
+
+            let nextKyNum = targetPredictKy;
+            let predictNext = getPredictForKy(nextKyNum);
+            let kyStrNext = formatThreeDigits(nextKyNum);
+            let formattedPredictNext = formatPredictString(predictNext);
+
+            let htmlNextKy = `<p style="font-family:宋体;font-size:16px;line-height:32px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStrNext}期<span style="color:#FFFF00;">:</span>七尾中特(<span style="color:#0000FF;">${formattedPredictNext}</span>)<span style="color:#808080;">开:</span>？00准</p>`;
+
+            let historyOutputs = [];
+
+            for (let i = 0; i < winEntries.length; i++) {
+                let entry = winEntries[i];
+                let kyStr = formatThreeDigits(entry.item.kyNum);
+                let formattedPredictHtml = formatWinText(entry.predicted, entry.hitTail);
+
+                historyOutputs.push(`<p style="font-family:宋体;font-size:16px;line-height:32px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStr}期<span style="color:#FFFF00;">:</span>七尾中特(<span style="color:#0000FF;">${formattedPredictHtml}</span>)<span style="color:#808080;">开:</span>${entry.shengXiaoWin}${entry.item.numTe}准</p>`);
+            }
+
+            let finalOutputs = [htmlNextKy, ...historyOutputs];
+
+            let currentCount = finalOutputs.length;
+            if (currentCount === 1) {
+                let kyStr1 = formatThreeDigits(nextKyNum + 1);
+                let kyStr2 = formatThreeDigits(nextKyNum + 2);
+                let defaultHtml1 = `<p style="font-family:宋体;font-size:16px;line-height:32px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStr1}期<span style="color:#FFFF00;">:</span>七尾中特(<span style="color:#0000FF;">$.$.$.$.$.$.$</span>)<span style="color:#808080;">开:</span>？00准</p>`;
+                let defaultHtml2 = `<p style="font-family:宋体;font-size:16px;line-height:32px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStr2}期<span style="color:#FFFF00;">:</span>七尾中特(<span style="color:#0000FF;">$.$.$.$.$.$.$</span>)<span style="color:#808080;">开:</span>？00准</p>`;
+                finalOutputs.unshift(defaultHtml1);
+                finalOutputs.unshift(defaultHtml2);
+            } else if (currentCount === 2) {
+                let kyStrExtra = formatThreeDigits(nextKyNum + 1);
+                let defaultHtmlExtra = `<p style="font-family:宋体;font-size:16px;line-height:32px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStrExtra}期<span style="color:#FFFF00;">:</span>七尾中特(<span style="color:#0000FF;">$.$.$.$.$.$.$</span>)<span style="color:#808080;">开:</span>？00准</p>`;
+                finalOutputs.unshift(defaultHtmlExtra);
+            }
+
+            document.getElementById('content-container').innerHTML = finalOutputs.join('');
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('content-container').innerHTML = '';
+        }
+    }
+    initPredict();
+</script>
+
+</body>
+</html>
