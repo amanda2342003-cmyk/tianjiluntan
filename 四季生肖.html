@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四季生肖</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 5px;
+            background-color: #fff;
+            color: #000;
+        }
+        .content {
+            font-size: 16px;
+            line-height: 1.2;
+        }
+        .win-digit {
+            background-color: yellow;
+            color: #FF0000;
+        }
+        .line-p {
+            font-family: 宋体;
+            font-size: 16px;
+            line-height: 32px;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+<div id="content-container" class="content"></div>
+
+<script>
+    const SPREADSHEET_ID = '19wtMwveTJ_eW09pp7ANQj1NkLNbHIA4kWLsoNAk5Xd8';
+    const SHEET_NAME_KQ = 'KQ_XIANGGANG';
+    const SHEET_NAME_DULIEU = 'DULIEU';
+
+    const URL_KQ = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_KQ}&_=${Date.now()}`;
+    const URL_DULIEU = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_DULIEU}&_=${Date.now()}`;
+
+    let duLieuMapB = {};
+    let duLieuMapE = {};
+
+    // 1. Phân loại 12 con giáp vào 4 mùa 春 夏 秋 冬
+    const CATEGORY_MAP = {
+        "春": ["兔", "虎", "龙"],
+        "夏": ["马", "蛇", "羊"],
+        "秋": ["鸡", "猴", "狗"],
+        "冬": ["鼠", "猪", "牛"]
+    };
+
+    // 2. Danh sách 366 kỳ dự đoán cố định cho 四季生肖
+    const PREDICT_366 = {
+        1: "春冬夏", 2: "夏春秋", 3: "冬夏春", 4: "春冬夏", 5: "秋春冬", 6: "冬夏秋", 7: "夏冬春", 8: "秋春夏", 9: "春秋冬", 10: "夏冬春",
+        11: "冬夏秋", 12: "秋春冬", 13: "夏冬春", 14: "冬夏秋", 15: "春秋冬", 16: "秋冬春", 17: "冬春秋", 18: "春秋夏", 19: "秋夏冬", 20: "夏冬春",
+        21: "冬春秋", 22: "春秋夏", 23: "夏冬春", 24: "冬夏秋", 25: "秋春冬", 26: "春冬夏", 27: "冬秋春", 28: "秋夏冬", 29: "春冬夏", 30: "冬秋春",
+        31: "夏春冬", 32: "春冬秋", 33: "冬秋夏", 34: "秋夏冬", 35: "春冬秋", 36: "冬秋夏", 37: "秋夏春", 38: "春冬秋", 39: "夏春冬", 40: "冬秋夏",
+        41: "秋夏春", 42: "夏冬秋", 43: "春秋冬", 44: "冬夏春", 45: "秋春夏", 46: "春冬秋", 47: "夏秋春", 48: "冬春夏", 49: "春冬秋", 50: "夏秋冬",
+        51: "冬春夏", 52: "秋夏春", 53: "春秋冬", 54: "夏冬秋", 55: "冬春夏", 56: "春秋冬", 57: "秋夏春", 58: "冬春秋", 59: "春秋冬", 60: "秋夏春",
+        61: "夏春秋", 62: "冬秋夏", 63: "秋夏冬", 64: "夏冬春", 65: "冬春秋", 66: "春秋冬", 67: "秋冬春", 68: "夏春秋", 69: "春秋夏", 70: "冬夏春",
+        71: "夏冬秋", 72: "春秋冬", 73: "冬春夏", 74: "夏冬春", 75: "春夏秋", 76: "冬秋夏", 77: "秋春冬", 78: "夏冬春", 79: "春秋夏", 80: "秋夏冬",
+        81: "夏冬秋", 82: "冬春夏", 83: "春秋冬", 84: "夏冬秋", 85: "秋夏春", 86: "春秋冬", 87: "冬春夏", 88: "秋冬春", 89: "春秋冬", 90: "冬春夏",
+        91: "秋冬春", 92: "春秋冬", 93: "夏春秋", 94: "秋冬春", 95: "春秋冬", 96: "冬春夏", 97: "秋夏春", 98: "春冬秋", 99: "夏春冬", 100: "秋夏春",
+        101: "春秋夏", 102: "夏冬秋", 103: "秋春冬", 104: "冬秋夏", 105: "春冬秋", 106: "夏春冬", 107: "冬秋夏", 108: "秋夏春", 109: "夏冬秋", 110: "春秋冬",
+        111: "冬春夏", 112: "秋夏春", 113: "夏冬秋", 114: "春秋冬", 115: "秋春夏", 116: "冬夏春", 117: "春秋冬", 118: "夏春秋", 119: "秋夏春", 120: "春秋夏",
+        121: "冬春秋", 122: "秋夏春", 123: "春冬夏", 124: "夏秋冬", 125: "秋夏春", 126: "冬春夏", 127: "夏秋冬", 128: "春夏秋", 129: "秋春夏", 130: "冬秋春",
+        131: "春夏秋", 132: "夏春冬", 133: "冬秋春", 134: "春冬夏", 135: "秋春冬", 136: "冬夏春", 137: "夏冬秋", 138: "春秋冬", 139: "秋夏春", 140: "夏春秋",
+        141: "春秋冬", 142: "秋冬夏", 143: "冬夏秋", 144: "夏春冬", 145: "春冬夏", 146: "秋夏春", 147: "冬春秋", 148: "春秋冬", 149: "夏冬春", 150: "秋春夏",
+        151: "冬夏秋", 152: "夏冬春", 153: "春秋夏", 154: "秋夏冬", 155: "夏冬秋", 156: "冬秋春", 157: "秋夏冬", 158: "夏冬秋", 159: "冬春夏", 160: "秋夏冬",
+        161: "夏冬秋", 162: "冬春夏", 163: "春秋冬", 164: "夏冬秋", 165: "秋夏春", 166: "冬秋夏", 167: "春冬秋", 168: "夏春冬", 169: "冬秋春", 170: "春冬夏",
+        171: "秋夏冬", 172: "冬春秋", 173: "春秋夏", 174: "秋夏冬", 175: "夏冬秋", 176: "冬秋夏", 177: "秋春冬", 178: "夏冬秋", 179: "冬秋春", 180: "秋春夏",
+        181: "夏冬秋", 182: "春秋冬", 183: "秋夏春", 184: "冬春秋", 185: "春秋冬", 186: "秋冬春", 187: "冬夏秋", 188: "夏秋冬", 189: "秋春夏", 190: "冬夏秋",
+        191: "夏秋冬", 192: "秋冬夏", 193: "冬夏秋", 194: "夏秋春", 195: "秋春冬", 196: "冬夏秋", 197: "夏冬春", 198: "春秋冬", 199: "冬春夏", 200: "秋夏春",
+        201: "春冬秋", 202: "夏春冬", 203: "秋夏春", 204: "春冬秋", 205: "冬春夏", 206: "夏秋冬", 207: "秋冬春", 208: "冬夏秋", 209: "夏秋冬", 210: "秋春夏",
+        211: "冬夏秋", 212: "夏秋春", 213: "秋冬夏", 214: "春夏秋", 215: "夏秋春", 216: "冬春夏", 217: "春夏冬", 218: "夏冬春", 219: "冬春夏", 220: "秋夏冬",
+        221: "夏冬春", 222: "冬春夏", 223: "春秋冬", 224: "秋冬春", 225: "冬春秋", 226: "春秋冬", 227: "夏冬春", 228: "秋春夏", 229: "春秋冬", 230: "夏冬秋",
+        231: "秋春夏", 232: "春夏冬", 233: "夏秋春", 234: "秋冬夏", 235: "冬夏秋", 236: "夏春冬", 237: "春冬夏", 238: "冬夏秋", 239: "夏春冬", 240: "秋冬夏",
+        241: "春夏秋", 242: "夏春冬", 243: "冬秋春", 244: "秋冬夏", 245: "春夏秋", 246: "夏秋春", 247: "冬春夏", 248: "春冬秋", 249: "秋夏冬", 250: "冬春夏",
+        251: "春冬秋", 252: "夏秋春", 253: "秋春夏", 254: "冬夏秋", 255: "春秋冬", 256: "秋冬春", 257: "冬春夏", 258: "春秋冬", 259: "夏冬春", 260: "冬夏秋",
+        261: "秋春夏", 262: "夏秋春", 263: "春夏秋", 264: "秋春夏", 265: "夏秋冬", 266: "春夏秋", 267: "秋春夏", 268: "夏秋春", 269: "春夏秋", 270: "秋春冬",
+        271: "夏冬春", 272: "春夏秋", 273: "冬秋夏", 274: "秋春冬", 275: "夏冬春", 276: "春秋夏", 277: "秋夏冬", 278: "夏冬春", 279: "冬春夏", 280: "秋夏冬",
+        281: "夏秋春", 282: "春冬夏", 283: "冬春秋", 284: "夏秋冬", 285: "秋夏春", 286: "冬春秋", 287: "春冬夏", 288: "夏秋春", 289: "冬夏秋", 290: "秋春冬",
+        291: "春秋夏", 292: "冬夏秋", 293: "秋春冬", 294: "春秋夏", 295: "夏冬秋", 296: "冬夏春", 297: "春秋冬", 298: "夏冬秋", 299: "秋春夏", 300: "春秋冬",
+        301: "夏冬秋", 302: "秋春夏", 303: "冬秋春", 304: "春冬秋", 305: "夏春冬", 306: "秋夏春", 307: "冬秋夏", 308: "春冬秋", 309: "秋夏春", 310: "夏春冬",
+        311: "春秋夏", 312: "秋冬春", 313: "夏春秋", 314: "春秋夏", 315: "秋冬春", 316: "夏春秋", 317: "冬秋夏", 318: "秋冬春", 319: "夏春冬", 320: "春秋夏",
+        321: "秋夏春", 322: "夏春秋", 323: "冬秋夏", 324: "春夏冬", 325: "夏春秋", 326: "秋冬夏", 327: "冬夏春", 328: "夏秋冬", 329: "春冬夏", 330: "冬夏秋",
+        331: "秋春冬", 332: "夏冬春", 333: "冬夏秋", 334: "秋春冬", 335: "夏冬春", 336: "春秋夏", 337: "冬春秋", 338: "夏冬春", 339: "春秋夏", 340: "冬春秋",
+        341: "夏冬春", 342: "春秋夏", 343: "秋春冬", 344: "夏冬春", 345: "春秋夏", 346: "秋春冬", 347: "夏冬秋", 348: "冬秋夏", 349: "秋夏冬", 350: "夏冬春",
+        351: "冬春秋", 352: "春秋冬", 353: "秋夏春", 354: "冬春秋", 355: "春秋冬", 356: "夏冬春", 357: "冬春夏", 358: "春夏秋", 359: "夏秋冬", 360: "冬春夏",
+        361: "秋夏春", 362: "夏秋冬", 363: "春冬夏", 364: "冬夏秋", 365: "夏秋春", 366: "春冬夏"
+    };
+
+    function fetchJSONP(url) {
+        return fetch(url)
+            .then(res => res.text())
+            .then(text => {
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+                if (match && match[1]) return JSON.parse(match[1]);
+                throw new Error("Cannot parse JSONP response");
+            });
+    }
+
+    function getPredictChoices(kyNum) {
+        let key = ((kyNum - 1) % 366) + 1;
+        let str = PREDICT_366[key] || "春冬夏";
+        return str.split('');
+    }
+
+    function formatTwoDigits(val) {
+        let cleanVal = String(val).trim();
+        let num = parseInt(cleanVal.replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '';
+        return String(num).padStart(2, '0');
+    }
+
+    function formatThreeDigits(val) {
+        let num = parseInt(String(val).replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '001';
+        return String(num).padStart(3, '0');
+    }
+
+    // Áp dụng đúng định dạng HTML và màu sắc theo mã gốc
+    function buildLineHtml(kyStr, choiceHtml, resultStr) {
+        return `<p class="line-p">${kyStr}期:四季生肖【<span style="color:#FF0000;">${choiceHtml}</span>】开:<span style="color:#FF0000;">${resultStr}</span>对</p>`;
+    }
+
+    async function initPredict() {
+        try {
+            const rawRules = await fetchJSONP(URL_DULIEU);
+            if (rawRules.table && rawRules.table.rows) {
+                rawRules.table.rows.forEach(r => {
+                    if (r.c && r.c[0] && r.c[0].v !== null && r.c[0].v !== undefined) {
+                        let formattedNum = formatTwoDigits(r.c[0].v);
+                        let animalB = (r.c[1] && r.c[1].v !== null && r.c[1].v !== undefined) ? String(r.c[1].v).trim() : '';
+                        let animalE = (r.c[4] && r.c[4].v !== null && r.c[4].v !== undefined) ? String(r.c[4].v).trim() : '';
+                        
+                        if (formattedNum) {
+                            if (animalB) duLieuMapB[formattedNum] = animalB;
+                            if (animalE) duLieuMapE[formattedNum] = animalE;
+                        }
+                    }
+                });
+            }
+
+            const rawKQ = await fetchJSONP(URL_KQ);
+            const rows = rawKQ.table.rows;
+            let parsedList = [];
+            let lastXRowIndex = -1;
+
+            if (rows) {
+                for (let i = 0; i < rows.length; i++) {
+                    const r = rows[i].c;
+                    if (!r) continue;
+
+                    let isXRow = false;
+                    for (let colIdx = 1; colIdx <= 7; colIdx++) {
+                        if (r[colIdx] && r[colIdx].v !== null && r[colIdx].v !== undefined) {
+                            if (String(r[colIdx].v).trim().toLowerCase() === 'x') {
+                                isXRow = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isXRow) {
+                        lastXRowIndex = i;
+                        continue;
+                    }
+
+                    if (!r[0] || r[0].v === null || r[0].v === undefined) continue;
+
+                    let kyRaw = String(r[0].v).trim();
+                    let kyOnlyNum = parseInt(kyRaw.replace(/\D/g, ''), 10) || 0;
+                    
+                    let numTeFormatted = '';
+                    if (r[7] && r[7].v !== null && r[7].v !== undefined) {
+                        let valStr = String(r[7].v).trim();
+                        if (valStr !== '' && valStr !== '0' && valStr !== '00') {
+                            numTeFormatted = formatTwoDigits(valStr);
+                        }
+                    }
+
+                    if (kyOnlyNum > 0) {
+                        parsedList.push({
+                            rowIndex: i,
+                            kyNum: kyOnlyNum,
+                            numTe: numTeFormatted
+                        });
+                    }
+                }
+            }
+
+            let doneList = [];
+            let pendingKyObj = null;
+
+            for (let i = 0; i < parsedList.length; i++) {
+                let item = parsedList[i];
+                let isDone = item.numTe !== '' && item.numTe !== '00';
+                if (isDone) {
+                    item.useMapE = (lastXRowIndex !== -1 && item.rowIndex > lastXRowIndex);
+                    doneList.push(item);
+                } else {
+                    pendingKyObj = item;
+                }
+            }
+
+            let targetPredictKy = 1;
+            if (pendingKyObj) {
+                targetPredictKy = pendingKyObj.kyNum;
+            } else if (doneList.length > 0) {
+                targetPredictKy = doneList[doneList.length - 1].kyNum + 1;
+            }
+
+            let winEntries = [];
+            let consecutiveLosses = 0;
+
+            for (let i = doneList.length - 1; i >= 0; i--) {
+                let item = doneList[i];
+                let choices = getPredictChoices(item.kyNum);
+                
+                let activeMap = item.useMapE ? duLieuMapE : duLieuMapB;
+                let actualShengXiao = activeMap[item.numTe] || duLieuMapB[item.numTe] || '';
+
+                let hitIndex = -1;
+                for (let cIdx = 0; cIdx < choices.length; cIdx++) {
+                    let charChoice = choices[cIdx];
+                    let animalsInChoice = CATEGORY_MAP[charChoice] || [];
+                    if (animalsInChoice.includes(actualShengXiao)) {
+                        hitIndex = cIdx;
+                        break;
+                    }
+                }
+
+                let isWin = (hitIndex !== -1);
+                
+                if (isWin) {
+                    consecutiveLosses = 0;
+                    winEntries.push({ item, choices, hitIndex, actualShengXiao });
+                    if (winEntries.length === 14) {
+                        break;
+                    }
+                } else {
+                    consecutiveLosses++;
+                    if (consecutiveLosses >= 3) {
+                        break;
+                    }
+                }
+            }
+
+            let nextKyNum = targetPredictKy;
+            let nextChoices = getPredictChoices(nextKyNum);
+            let kyStrNext = formatThreeDigits(nextKyNum);
+
+            // Kỳ mới chưa mở thưởng (dự đoán)
+            let htmlNextKy = buildLineHtml(kyStrNext, nextChoices.join(''), "？00");
+
+            let historyOutputs = [];
+
+            for (let i = 0; i < winEntries.length; i++) {
+                let entry = winEntries[i];
+                let kyStr = formatThreeDigits(entry.item.kyNum);
+                
+                // Chỉ bôi nền vàng, chữ đỏ cho ký tự dự đoán TRÚNG
+                let choiceHtml = "";
+                for (let cIdx = 0; cIdx < entry.choices.length; cIdx++) {
+                    if (cIdx === entry.hitIndex) {
+                        choiceHtml += `<span class="win-digit">${entry.choices[cIdx]}</span>`;
+                    } else {
+                        choiceHtml += entry.choices[cIdx];
+                    }
+                }
+
+                let resultText = `${entry.actualShengXiao}${entry.item.numTe}`;
+
+                historyOutputs.push(buildLineHtml(kyStr, choiceHtml, resultText));
+            }
+
+            let finalOutputs = [htmlNextKy, ...historyOutputs];
+
+            // Nếu trượt quá 3 kỳ, áp dụng kỳ mặc định 【發發發】
+            let currentCount = finalOutputs.length;
+            if (currentCount === 1) {
+                let kyStr1 = formatThreeDigits(nextKyNum + 1);
+                let kyStr2 = formatThreeDigits(nextKyNum + 2);
+                let defaultHtml1 = buildLineHtml(kyStr1, "發發發", "？00");
+                let defaultHtml2 = buildLineHtml(kyStr2, "發發發", "？00");
+                finalOutputs.unshift(defaultHtml1);
+                finalOutputs.unshift(defaultHtml2);
+            } else if (currentCount === 2) {
+                let kyStrExtra = formatThreeDigits(nextKyNum + 1);
+                let defaultHtmlExtra = buildLineHtml(kyStrExtra, "發發發", "？00");
+                finalOutputs.unshift(defaultHtmlExtra);
+            }
+
+            document.getElementById('content-container').innerHTML = finalOutputs.join('');
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('content-container').innerHTML = '';
+        }
+    }
+    initPredict();
+</script>
+
+</body>
+</html>
