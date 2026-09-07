@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>阴阳生肖</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 5px;
+            background-color: #fff;
+            color: #000;
+        }
+        .content {
+            font-size: 16px;
+            line-height: 1.2;
+        }
+        .win-digit {
+            background-color: yellow;
+            color: #FF0000;
+        }
+        .line-p {
+            font-family: 宋体;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 25px;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+<div id="content-container" class="content"></div>
+
+<script>
+    const SPREADSHEET_ID = '19wtMwveTJ_eW09pp7ANQj1NkLNbHIA4kWLsoNAk5Xd8';
+    const SHEET_NAME_KQ = 'KQ_XIANGGANG';
+    const SHEET_NAME_DULIEU = 'DULIEU';
+
+    const URL_KQ = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_KQ}&_=${Date.now()}`;
+    const URL_DULIEU = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_DULIEU}&_=${Date.now()}`;
+
+    let duLieuMapB = {};
+    let duLieuMapE = {};
+
+    // Phân loại con giáp vào 阴肖 và 阳肖
+    const YIN_XIAO = ["鼠", "龙", "蛇", "马", "狗", "猪"];
+    const YANG_XIAO = ["牛", "虎", "兔", "羊", "猴", "鸡"];
+
+    // Danh sách 366 kỳ dự đoán cố định (Đã thay 大数 -> 阴肖, 小数 -> 阳肖)
+    const STATIC_PREDICTIONS = {
+        1: "阳肖", 2: "阴肖", 3: "阴肖", 4: "阳肖", 5: "阳肖", 6: "阴肖", 7: "阴肖", 8: "阳肖", 9: "阳肖", 10: "阴肖",
+        11: "阴肖", 12: "阳肖", 13: "阴肖", 14: "阴肖", 15: "阳肖", 16: "阳肖", 17: "阴肖", 18: "阳肖", 19: "阳肖", 20: "阴肖",
+        21: "阳肖", 22: "阴肖", 23: "阳肖", 24: "阴肖", 25: "阳肖", 26: "阳肖", 27: "阴肖", 28: "阳肖", 29: "阴肖", 30: "阳肖",
+        31: "阳肖", 32: "阴肖", 33: "阴肖", 34: "阳肖", 35: "阴肖", 36: "阴肖", 37: "阳肖", 38: "阳肖", 39: "阴肖", 40: "阳肖",
+        41: "阳肖", 42: "阴肖", 43: "阴肖", 44: "阳肖", 45: "阳肖", 46: "阴肖", 47: "阴肖", 48: "阳肖", 49: "阴肖", 50: "阳肖",
+        51: "阴肖", 52: "阳肖", 53: "阳肖", 54: "阴肖", 55: "阳肖", 56: "阳肖", 57: "阴肖", 58: "阴肖", 59: "阳肖", 60: "阴肖",
+        61: "阴肖", 62: "阳肖", 63: "阳肖", 64: "阴肖", 65: "阳肖", 66: "阳肖", 67: "阴肖", 68: "阴肖", 69: "阳肖", 70: "阴肖",
+        71: "阳肖", 72: "阳肖", 73: "阴肖", 74: "阳肖", 75: "阴肖", 76: "阴肖", 77: "阳肖", 78: "阴肖", 79: "阴肖", 80: "阳肖",
+        81: "阴肖", 82: "阳肖", 83: "阴肖", 84: "阳肖", 85: "阴肖", 86: "阴肖", 87: "阳肖", 88: "阴肖", 89: "阴肖", 90: "阳肖",
+        91: "阴肖", 92: "阳肖", 93: "阴肖", 94: "阴肖", 95: "阳肖", 96: "阴肖", 97: "阳肖", 98: "阴肖", 99: "阳肖", 100: "阴肖",
+        101: "阳肖", 102: "阳肖", 103: "阴肖", 104: "阴肖", 105: "阳肖", 106: "阳肖", 107: "阴肖", 108: "阴肖", 109: "阳肖", 110: "阳肖",
+        111: "阴肖", 112: "阴肖", 113: "阳肖", 114: "阴肖", 115: "阴肖", 116: "阳肖", 117: "阳肖", 118: "阴肖", 119: "阴肖", 120: "阳肖",
+        121: "阳肖", 122: "阴肖", 123: "阳肖", 124: "阳肖", 125: "阴肖", 126: "阳肖", 127: "阳肖", 128: "阴肖", 129: "阴肖", 130: "阳肖",
+        131: "阴肖", 132: "阴肖", 133: "阳肖", 134: "阳肖", 135: "阴肖", 136: "阳肖", 137: "阳肖", 138: "阴肖", 139: "阳肖", 140: "阴肖",
+        141: "阴肖", 142: "阳肖", 143: "阴肖", 144: "阴肖", 145: "阳肖", 146: "阴肖", 147: "阳肖", 148: "阴肖", 149: "阳肖", 150: "阳肖",
+        151: "阴肖", 152: "阳肖", 153: "阴肖", 154: "阳肖", 155: "阴肖", 156: "阴肖", 157: "阳肖", 158: "阴肖", 159: "阴肖", 160: "阳肖",
+        161: "阴肖", 162: "阳肖", 163: "阳肖", 164: "阴肖", 165: "阴肖", 166: "阳肖", 167: "阳肖", 168: "阴肖", 169: "阴肖", 170: "阳肖",
+        171: "阴肖", 172: "阴肖", 173: "阳肖", 174: "阴肖", 175: "阳肖", 176: "阴肖", 177: "阴肖", 178: "阳肖", 179: "阴肖", 180: "阴肖",
+        181: "阳肖", 182: "阴肖", 183: "阴肖", 184: "阳肖", 185: "阴肖", 186: "阳肖", 187: "阴肖", 188: "阴肖", 189: "阳肖", 190: "阳肖",
+        191: "阴肖", 192: "阳肖", 193: "阳肖", 194: "阴肖", 195: "阴肖", 196: "阳肖", 197: "阴肖", 198: "阳肖", 199: "阳肖", 200: "阴肖",
+        201: "阳肖", 202: "阴肖", 203: "阳肖", 204: "阳肖", 205: "阴肖", 206: "阴肖", 207: "阳肖", 208: "阳肖", 209: "阴肖", 210: "阳肖",
+        211: "阴肖", 212: "阴肖", 213: "阳肖", 214: "阴肖", 215: "阳肖", 216: "阳肖", 217: "阴肖", 218: "阳肖", 219: "阴肖", 220: "阳肖",
+        221: "阳肖", 222: "阴肖", 223: "阳肖", 224: "阳肖", 225: "阴肖", 226: "阴肖", 227: "阳肖", 228: "阳肖", 229: "阴肖", 230: "阳肖",
+        231: "阴肖", 232: "阴肖", 233: "阳肖", 234: "阳肖", 235: "阴肖", 236: "阴肖", 237: "阳肖", 238: "阴肖", 239: "阴肖", 240: "阳肖",
+        241: "阳肖", 242: "阴肖", 243: "阴肖", 244: "阳肖", 245: "阳肖", 246: "阴肖", 247: "阴肖", 248: "阳肖", 249: "阴肖", 250: "阳肖",
+        251: "阴肖", 252: "阳肖", 253: "阴肖", 254: "阳肖", 255: "阴肖", 256: "阴肖", 257: "阳肖", 258: "阳肖", 259: "阴肖", 260: "阴肖",
+        261: "阳肖", 262: "阴肖", 263: "阳肖", 264: "阴肖", 265: "阴肖", 266: "阳肖", 267: "阴肖", 268: "阴肖", 269: "阳肖", 270: "阳肖",
+        271: "阴肖", 272: "阴肖", 273: "阳肖", 274: "阴肖", 275: "阳肖", 276: "阳肖", 277: "阴肖", 278: "阳肖", 279: "阴肖", 280: "阴肖",
+        281: "阳肖", 282: "阴肖", 283: "阴肖", 284: "阳肖", 285: "阳肖", 286: "阴肖", 287: "阳肖", 288: "阴肖", 289: "阳肖", 290: "阴肖",
+        291: "阴肖", 292: "阳肖", 293: "阴肖", 294: "阳肖", 295: "阴肖", 296: "阳肖", 297: "阴肖", 298: "阳肖", 299: "阳肖", 300: "阴肖",
+        301: "阳肖", 302: "阳肖", 303: "阴肖", 304: "阴肖", 305: "阳肖", 306: "阳肖", 307: "阴肖", 308: "阳肖", 309: "阳肖", 310: "阴肖",
+        311: "阳肖", 312: "阳肖", 313: "阴肖", 314: "阳肖", 315: "阴肖", 316: "阴肖", 317: "阳肖", 318: "阳肖", 319: "阴肖", 320: "阳肖",
+        321: "阳肖", 322: "阴肖", 323: "阴肖", 324: "阳肖", 325: "阳肖", 326: "阴肖", 327: "阳肖", 328: "阳肖", 329: "阴肖", 330: "阴肖",
+        331: "阳肖", 332: "阳肖", 333: "阴肖", 334: "阳肖", 335: "阳肖", 336: "阴肖", 337: "阴肖", 338: "阳肖", 339: "阴肖", 340: "阴肖",
+        341: "阳肖", 342: "阳肖", 343: "阴肖", 344: "阳肖", 345: "阳肖", 346: "阴肖", 347: "阴肖", 348: "阳肖", 349: "阳肖", 350: "阴肖",
+        351: "阳肖", 352: "阴肖", 353: "阴肖", 354: "阳肖", 355: "阳肖", 356: "阴肖", 357: "阴肖", 358: "阳肖", 359: "阴肖", 360: "阴肖",
+        361: "阳肖", 362: "阴肖", 363: "阳肖", 364: "阴肖", 365: "阳肖", 366: "阴肖"
+    };
+
+    function fetchJSONP(url) {
+        return fetch(url)
+            .then(res => res.text())
+            .then(text => {
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+                if (match && match[1]) return JSON.parse(match[1]);
+                throw new Error("Cannot parse JSONP response");
+            });
+    }
+
+    function getPredictChoiceForKy(kyNum) {
+        let actualKy = ((kyNum - 1) % 366) + 1;
+        if (STATIC_PREDICTIONS[actualKy]) {
+            return STATIC_PREDICTIONS[actualKy];
+        }
+        let cycle = Math.floor((actualKy - 1) / 2);
+        return cycle % 2 === 0 ? "阴肖" : "阳肖";
+    }
+
+    function getGroupOfAnimal(animalStr) {
+        if (YIN_XIAO.includes(animalStr)) return "阴肖";
+        if (YANG_XIAO.includes(animalStr)) return "阳肖";
+        return "";
+    }
+
+    function formatTwoDigits(val) {
+        let cleanVal = String(val).trim();
+        let num = parseInt(cleanVal.replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '';
+        return String(num).padStart(2, '0');
+    }
+
+    function formatThreeDigits(val) {
+        let num = parseInt(String(val).replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '001';
+        return String(num).padStart(3, '0');
+    }
+
+    // Định dạng HTML chuẩn theo mẫu đã cho
+    function buildLineHtml(kyStr, choiceHtml, resultStr) {
+        return `<p class="line-p">${kyStr}期:<span style="color:#0000FF;">阴阳生肖</span>【<span style="color:#FF0000;">${choiceHtml}</span>】開:<span style="color:#FF0000;">${resultStr}</span>赚</p>`;
+    }
+
+    async function initPredict() {
+        try {
+            const rawRules = await fetchJSONP(URL_DULIEU);
+            if (rawRules.table && rawRules.table.rows) {
+                rawRules.table.rows.forEach(r => {
+                    if (r.c && r.c[0] && r.c[0].v !== null && r.c[0].v !== undefined) {
+                        let formattedNum = formatTwoDigits(r.c[0].v);
+                        let animalB = (r.c[1] && r.c[1].v !== null && r.c[1].v !== undefined) ? String(r.c[1].v).trim() : '';
+                        let animalE = (r.c[4] && r.c[4].v !== null && r.c[4].v !== undefined) ? String(r.c[4].v).trim() : '';
+                        
+                        if (formattedNum) {
+                            if (animalB) duLieuMapB[formattedNum] = animalB;
+                            if (animalE) duLieuMapE[formattedNum] = animalE;
+                        }
+                    }
+                });
+            }
+
+            const rawKQ = await fetchJSONP(URL_KQ);
+            const rows = rawKQ.table.rows;
+            let parsedList = [];
+            let lastXRowIndex = -1;
+
+            if (rows) {
+                for (let i = 0; i < rows.length; i++) {
+                    const r = rows[i].c;
+                    if (!r) continue;
+
+                    let isXRow = false;
+                    for (let colIdx = 1; colIdx <= 7; colIdx++) {
+                        if (r[colIdx] && r[colIdx].v !== null && r[colIdx].v !== undefined) {
+                            if (String(r[colIdx].v).trim().toLowerCase() === 'x') {
+                                isXRow = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isXRow) {
+                        lastXRowIndex = i;
+                        continue;
+                    }
+
+                    if (!r[0] || r[0].v === null || r[0].v === undefined) continue;
+
+                    let kyRaw = String(r[0].v).trim();
+                    let kyOnlyNum = parseInt(kyRaw.replace(/\D/g, ''), 10) || 0;
+                    
+                    let numTeFormatted = '';
+                    if (r[7] && r[7].v !== null && r[7].v !== undefined) {
+                        let valStr = String(r[7].v).trim();
+                        if (valStr !== '' && valStr !== '0' && valStr !== '00') {
+                            numTeFormatted = formatTwoDigits(valStr);
+                        }
+                    }
+
+                    if (kyOnlyNum > 0) {
+                        parsedList.push({
+                            rowIndex: i,
+                            kyNum: kyOnlyNum,
+                            numTe: numTeFormatted
+                        });
+                    }
+                }
+            }
+
+            let doneList = [];
+            let pendingKyObj = null;
+
+            for (let i = 0; i < parsedList.length; i++) {
+                let item = parsedList[i];
+                let isDone = item.numTe !== '' && item.numTe !== '00';
+                if (isDone) {
+                    item.useMapE = (lastXRowIndex !== -1 && item.rowIndex > lastXRowIndex);
+                    doneList.push(item);
+                } else {
+                    pendingKyObj = item;
+                }
+            }
+
+            let targetPredictKy = 1;
+            if (pendingKyObj) {
+                targetPredictKy = pendingKyObj.kyNum;
+            } else if (doneList.length > 0) {
+                targetPredictKy = doneList[doneList.length - 1].kyNum + 1;
+            }
+
+            let winEntries = [];
+            let consecutiveLosses = 0;
+
+            for (let i = doneList.length - 1; i >= 0; i--) {
+                let item = doneList[i];
+                let predicted = getPredictChoiceForKy(item.kyNum);
+                
+                let activeMap = item.useMapE ? duLieuMapE : duLieuMapB;
+                let actualAnimal = activeMap[item.numTe] || duLieuMapB[item.numTe] || '';
+                let actualGroup = getGroupOfAnimal(actualAnimal);
+
+                let isWin = actualGroup && (predicted === actualGroup);
+                
+                if (isWin) {
+                    consecutiveLosses = 0;
+                    winEntries.push({ item, predicted, actualAnimal });
+                    if (winEntries.length === 14) {
+                        break;
+                    }
+                } else {
+                    consecutiveLosses++;
+                    if (consecutiveLosses >= 3) {
+                        break;
+                    }
+                }
+            }
+
+            let nextKyNum = targetPredictKy;
+            let predictNext = getPredictChoiceForKy(nextKyNum);
+            let kyStrNext = formatThreeDigits(nextKyNum);
+
+            let htmlNextKy = buildLineHtml(kyStrNext, predictNext, "？00");
+
+            let historyOutputs = [];
+
+            for (let i = 0; i < winEntries.length; i++) {
+                let entry = winEntries[i];
+                let resStrWin = entry.actualAnimal + entry.item.numTe;
+                let kyStr = formatThreeDigits(entry.item.kyNum);
+                
+                // Bôi nền vàng, chữ đỏ cho lựa chọn dự đoán TRÚNG
+                let formattedPredictHtml = `<span class="win-digit">${entry.predicted}</span>`;
+                historyOutputs.push(buildLineHtml(kyStr, formattedPredictHtml, resStrWin));
+            }
+
+            let finalOutputs = [htmlNextKy, ...historyOutputs];
+
+            // Nếu reset sau 3 lần trượt liên tiếp, chèn các kỳ mặc định 發發
+            let currentCount = finalOutputs.length;
+            if (currentCount === 1) {
+                let kyStr1 = formatThreeDigits(nextKyNum + 1);
+                let kyStr2 = formatThreeDigits(nextKyNum + 2);
+                let defaultHtml1 = buildLineHtml(kyStr1, "發發", "？00");
+                let defaultHtml2 = buildLineHtml(kyStr2, "發發", "？00");
+                finalOutputs.unshift(defaultHtml1);
+                finalOutputs.unshift(defaultHtml2);
+            } else if (currentCount === 2) {
+                let kyStrExtra = formatThreeDigits(nextKyNum + 1);
+                let defaultHtmlExtra = buildLineHtml(kyStrExtra, "發發", "？00");
+                finalOutputs.unshift(defaultHtmlExtra);
+            }
+
+            document.getElementById('content-container').innerHTML = finalOutputs.join('');
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('content-container').innerHTML = '';
+        }
+    }
+    initPredict();
+</script>
+
+</body>
+</html>
