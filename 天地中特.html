@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天地中特</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 5px;
+            background-color: #fff;
+            color: #000;
+        }
+        .content {
+            font-size: 16px;
+            line-height: 1.2;
+        }
+        .win-digit {
+            background-color: yellow;
+            color: #FF0000;
+        }
+        .line-p {
+            font-size: 16px;
+            line-height: 1.2;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="content-container" class="content"></div>
+
+<script>
+    const SPREADSHEET_ID = '19wtMwveTJ_eW09pp7ANQj1NkLNbHIA4kWLsoNAk5Xd8';
+    const SHEET_NAME_KQ = 'KQ_XIANGGANG';
+    const SHEET_NAME_DULIEU = 'DULIEU';
+
+    const URL_KQ = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_KQ}&_=${Date.now()}`;
+    const URL_DULIEU = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_DULIEU}&_=${Date.now()}`;
+
+    let duLieuMapB = {};
+    let duLieuMapE = {};
+
+    // Định nghĩa nhóm con giáp Thiên/Địa
+    const TIAN_XIAO = ["马", "龙", "兔", "牛", "猪", "猴"];
+    const DI_XIAO = ["蛇", "虎", "鼠", "狗", "鸡", "羊"];
+
+    // 366 kỳ dự đoán cố định
+    const STATIC_PREDICTIONS = {
+        1: "地肖+兔龙", 2: "地肖+猴猪", 3: "天肖+蛇鸡", 4: "天肖+狗鼠", 5: "地肖+龙猪", 6: "地肖+猴牛", 7: "天肖+虎鼠", 8: "天肖+鸡狗", 9: "地肖+猴牛", 10: "天肖+虎羊",
+        11: "地肖+龙马", 12: "天肖+鼠蛇", 13: "天肖+鸡虎", 14: "地肖+龙牛", 15: "地肖+猪兔", 16: "天肖+狗鸡", 17: "天肖+鼠蛇", 18: "地肖+牛兔", 19: "地肖+猪龙", 20: "天肖+蛇虎",
+        21: "天肖+羊狗", 22: "地肖+猴龙", 23: "天肖+鸡鼠", 24: "地肖+马兔", 25: "天肖+虎狗", 26: "地肖+猴猪", 27: "天肖+蛇鸡", 28: "地肖+龙兔", 29: "天肖+虎鼠", 30: "天肖+羊蛇",
+        31: "地肖+马龙", 32: "天肖+狗虎", 33: "地肖+牛猴", 34: "天肖+羊蛇", 35: "天肖+鼠鸡", 36: "地肖+龙兔", 37: "天肖+羊虎", 38: "天肖+鸡狗", 39: "地肖+牛马", 40: "地肖+兔猪",
+        41: "天肖+羊鸡", 42: "地肖+马龙", 43: "天肖+虎狗", 44: "地肖+牛猪", 45: "天肖+鸡蛇", 46: "地肖+兔龙", 47: "地肖+马猴", 48: "天肖+鼠羊", 49: "天肖+蛇狗", 50: "地肖+牛猪",
+        51: "天肖+鸡鼠", 52: "天肖+虎狗", 53: "地肖+龙猪", 54: "天肖+蛇羊", 55: "天肖+虎狗", 56: "地肖+猪牛", 57: "地肖+龙猴", 58: "天肖+蛇鼠", 59: "天肖+虎鸡", 60: "地肖+牛猴",
+        61: "地肖+龙马", 62: "天肖+羊虎", 63: "地肖+猪牛", 64: "天肖+鼠狗", 65: "地肖+兔马", 66: "地肖+猪牛", 67: "天肖+蛇狗", 68: "地肖+马龙", 69: "地肖+牛兔", 70: "天肖+羊鸡",
+        71: "天肖+蛇狗", 72: "地肖+龙猴", 73: "地肖+猪牛", 74: "天肖+鼠蛇", 75: "地肖+猴龙", 76: "地肖+兔牛", 77: "天肖+蛇狗", 78: "天肖+鼠鸡", 79: "地肖+马龙", 80: "天肖+狗羊",
+        81: "地肖+猴猪", 82: "天肖+鼠虎", 83: "地肖+牛龙", 84: "天肖+狗鸡", 85: "地肖+猪兔", 86: "地肖+龙猴", 87: "天肖+羊狗", 88: "地肖+马牛", 89: "天肖+鼠蛇", 90: "地肖+兔龙",
+        91: "天肖+鸡狗", 92: "地肖+马牛", 93: "地肖+猪兔", 94: "天肖+虎狗", 95: "天肖+蛇鼠", 96: "地肖+猪马", 97: "地肖+兔龙", 98: "天肖+鼠虎", 99: "天肖+鸡狗", 100: "地肖+牛龙",
+        101: "天肖+虎蛇", 102: "地肖+马兔", 103: "天肖+羊鸡", 104: "地肖+猴猪", 105: "天肖+虎蛇", 106: "地肖+马兔", 107: "地肖+龙牛", 108: "天肖+狗羊", 109: "地肖+猴马", 110: "天肖+虎蛇",
+        111: "地肖+龙兔", 112: "天肖+鸡羊", 113: "地肖+猴牛", 114: "地肖+猪龙", 115: "天肖+虎羊", 116: "地肖+牛猴", 117: "天肖+狗蛇", 118: "天肖+鼠虎", 119: "地肖+牛龙", 120: "地肖+马猪",
+        121: "天肖+鼠羊", 122: "天肖+虎狗", 123: "地肖+猴猪", 124: "地肖+马兔", 125: "天肖+蛇鼠", 126: "天肖+虎鸡", 127: "地肖+马牛", 128: "地肖+兔龙", 129: "天肖+虎蛇", 130: "天肖+狗鸡",
+        131: "地肖+马兔", 132: "地肖+牛猪", 133: "天肖+鼠鸡", 134: "天肖+羊狗", 135: "地肖+龙猴", 136: "地肖+马兔", 137: "天肖+狗虎", 138: "地肖+龙牛", 139: "天肖+蛇鸡", 140: "地肖+马兔",
+        141: "天肖+狗鼠", 142: "天肖+虎蛇", 143: "地肖+马龙", 144: "天肖+狗鸡", 145: "天肖+鼠蛇", 146: "地肖+牛马", 147: "天肖+鸡羊", 148: "地肖+猪猴", 149: "地肖+牛马", 150: "天肖+鼠鸡",
+        151: "地肖+猴龙", 152: "地肖+牛猪", 153: "天肖+鼠鸡", 154: "天肖+羊蛇", 155: "地肖+牛猪", 156: "天肖+鸡狗", 157: "地肖+龙猴", 158: "天肖+蛇鼠", 159: "天肖+狗虎", 160: "地肖+马兔",
+        161: "天肖+蛇鼠", 162: "地肖+猴龙", 163: "地肖+兔猪", 164: "天肖+羊鸡", 165: "地肖+牛龙", 166: "天肖+鼠虎", 167: "地肖+猪兔", 168: "天肖+狗鸡", 169: "天肖+羊蛇", 170: "地肖+牛猪",
+        171: "天肖+鸡狗", 172: "地肖+兔猴", 173: "天肖+鼠虎", 174: "天肖+鸡羊", 175: "地肖+马龙", 176: "天肖+狗鼠", 177: "地肖+兔猪", 178: "地肖+牛马", 179: "天肖+羊鼠", 180: "天肖+蛇狗",
+        181: "地肖+猴兔", 182: "天肖+鼠鸡", 183: "地肖+猪龙", 184: "天肖+虎狗", 185: "天肖+鼠羊", 186: "地肖+龙猴", 187: "地肖+猪牛", 188: "天肖+羊蛇", 189: "地肖+龙兔", 190: "地肖+牛猴",
+        191: "天肖+虎羊", 192: "地肖+龙马", 193: "天肖+狗鼠", 194: "地肖+猴兔", 195: "天肖+虎羊", 196: "地肖+猪牛", 197: "天肖+鼠鸡", 198: "天肖+狗虎", 199: "地肖+猴马", 200: "天肖+蛇羊",
+        201: "天肖+鸡虎", 202: "地肖+马牛", 203: "地肖+猴龙", 204: "天肖+羊鸡", 205: "天肖+虎鼠", 206: "地肖+牛兔", 207: "天肖+羊蛇", 208: "天肖+狗鼠", 209: "地肖+马兔", 210: "天肖+蛇鸡",
+        211: "天肖+羊虎", 212: "地肖+猴猪", 213: "天肖+狗鼠", 214: "天肖+蛇鸡", 215: "地肖+牛猪", 216: "天肖+鼠狗", 217: "地肖+马猴", 218: "天肖+羊虎", 219: "地肖+猪龙", 220: "天肖+鸡鼠",
+        221: "天肖+羊虎", 222: "地肖+猪马", 223: "天肖+鸡鼠", 224: "天肖+蛇虎", 225: "地肖+猴龙", 226: "天肖+鸡鼠", 227: "地肖+兔马", 228: "地肖+猴龙", 229: "天肖+羊鼠", 230: "地肖+牛兔",
+        231: "天肖+鸡虎", 232: "地肖+猪猴", 233: "天肖+羊蛇", 234: "天肖+狗虎", 235: "地肖+马兔", 236: "天肖+鸡鼠", 237: "天肖+羊狗", 238: "地肖+兔牛", 239: "地肖+龙马", 240: "天肖+狗羊",
+        241: "天肖+蛇虎", 242: "地肖+牛兔", 243: "天肖+鸡羊", 244: "天肖+虎蛇", 245: "地肖+马兔", 246: "天肖+鼠狗", 247: "天肖+虎蛇", 248: "地肖+猴兔", 249: "地肖+猪牛", 250: "天肖+鸡虎",
+        251: "地肖+马龙", 252: "天肖+羊狗", 253: "天肖+蛇虎", 254: "地肖+兔牛", 255: "天肖+狗鸡", 256: "地肖+龙猪", 257: "地肖+兔牛", 258: "天肖+鼠蛇", 259: "地肖+马猪", 260: "天肖+羊虎",
+        261: "天肖+狗蛇", 262: "地肖+兔猪", 263: "地肖+牛猴", 264: "天肖+鸡鼠", 265: "天肖+狗蛇", 266: "地肖+猪马", 267: "天肖+鼠虎", 268: "地肖+猴龙", 269: "天肖+鸡蛇", 270: "地肖+兔猪",
+        271: "地肖+猴龙", 272: "天肖+蛇羊", 273: "地肖+牛兔", 274: "天肖+鼠狗", 275: "天肖+羊蛇", 276: "地肖+兔猪", 277: "天肖+鼠虎", 278: "地肖+龙牛", 279: "天肖+蛇狗", 280: "地肖+猪马",
+        281: "地肖+兔牛", 282: "天肖+羊虎", 283: "地肖+龙马", 284: "天肖+鼠鸡", 285: "地肖+猴兔", 286: "天肖+虎狗", 287: "地肖+马龙", 288: "地肖+牛猪", 289: "天肖+蛇虎", 290: "天肖+狗羊",
+        291: "地肖+猴马", 292: "天肖+鼠鸡", 293: "地肖+兔牛", 294: "地肖+龙猪", 295: "天肖+鼠狗", 296: "地肖+马猴", 297: "天肖+鸡蛇", 298: "地肖+猪牛", 299: "天肖+虎狗", 300: "天肖+蛇羊",
+        301: "地肖+牛猴", 302: "天肖+狗虎", 303: "地肖+兔猪", 304: "地肖+牛马", 305: "天肖+蛇虎", 306: "地肖+猴兔", 307: "地肖+牛猪", 308: "天肖+鼠虎", 309: "天肖+羊鸡", 310: "地肖+猴猪",
+        311: "地肖+兔马", 312: "天肖+虎狗", 313: "地肖+猪猴", 314: "地肖+牛马", 315: "天肖+羊鼠", 316: "地肖+猴龙", 317: "天肖+蛇鸡", 318: "地肖+马兔", 319: "天肖+羊狗", 320: "地肖+龙猴",
+        321: "地肖+马猪", 322: "天肖+鸡蛇", 323: "天肖+狗羊", 324: "地肖+牛猪", 325: "地肖+龙马", 326: "天肖+鸡狗", 327: "天肖+羊虎", 328: "地肖+兔马", 329: "天肖+鼠蛇", 330: "地肖+龙猴",
+        331: "天肖+狗虎", 332: "天肖+鸡羊", 333: "地肖+兔龙", 334: "地肖+猪马", 335: "天肖+鸡虎", 336: "天肖+蛇羊", 337: "地肖+牛兔", 338: "天肖+狗鼠", 339: "天肖+虎鸡", 340: "地肖+马牛",
+        341: "天肖+狗鼠", 342: "地肖+猴龙", 343: "天肖+鸡虎", 344: "天肖+羊狗", 345: "地肖+马猪", 346: "地肖+猴兔", 347: "天肖+蛇羊", 348: "地肖+猪马", 349: "地肖+兔龙", 350: "天肖+蛇狗",
+        351: "天肖+鼠虎", 352: "地肖+马牛", 353: "天肖+羊狗", 354: "地肖+猴龙", 355: "地肖+牛马", 356: "天肖+鸡蛇", 357: "地肖+猪猴", 358: "天肖+虎狗", 359: "地肖+兔龙", 360: "天肖+鼠鸡",
+        361: "地肖+马牛", 362: "天肖+虎蛇", 363: "地肖+猴猪", 364: "地肖+龙牛", 365: "天肖+羊鼠", 366: "天肖+虎鸡"
+    };
+
+    function fetchJSONP(url) {
+        return fetch(url)
+            .then(res => res.text())
+            .then(text => {
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+                if (match && match[1]) return JSON.parse(match[1]);
+                throw new Error("Cannot parse JSONP response");
+            });
+    }
+
+    function getPredictForKy(kyNum) {
+        let actualKy = ((kyNum - 1) % 366) + 1;
+        return STATIC_PREDICTIONS[actualKy] || "天肖+虎鼠";
+    }
+
+    // Kiểm tra vế trước (Thien/Dia) và vế sau (2 con giáp)
+    function checkHit(predictStr, actualAnimal) {
+        if (!actualAnimal) {
+            return { isWin: false, hit1: false, hit2: false };
+        }
+
+        let parts = predictStr.split('+');
+        let part1 = parts[0]; // 天肖 / 地肖
+        let part2 = parts[1] || ""; // 2 con giáp
+
+        let hit1 = false;
+        if (part1 === "天肖" && TIAN_XIAO.includes(actualAnimal)) hit1 = true;
+        if (part1 === "地肖" && DI_XIAO.includes(actualAnimal)) hit1 = true;
+
+        let hit2 = false;
+        if (part2.includes(actualAnimal)) hit2 = true;
+
+        return {
+            isWin: hit1 || hit2,
+            hit1: hit1,
+            hit2: hit2
+        };
+    }
+
+    function formatTwoDigits(val) {
+        let cleanVal = String(val).trim();
+        let num = parseInt(cleanVal.replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '';
+        return String(num).padStart(2, '0');
+    }
+
+    function formatThreeDigits(val) {
+        let num = parseInt(String(val).replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '001';
+        return String(num).padStart(3, '0');
+    }
+
+    function buildLineHtml(kyStr, choiceHtml, resultStr) {
+        return `<p class="line-p">${kyStr}期：<span style="color:#0000FF;">天地中特</span>【${choiceHtml}】开<span style="color:#FF0000;">${resultStr}</span>对</p>`;
+    }
+
+    async function initPredict() {
+        try {
+            const rawRules = await fetchJSONP(URL_DULIEU);
+            if (rawRules.table && rawRules.table.rows) {
+                rawRules.table.rows.forEach(r => {
+                    if (r.c && r.c[0] && r.c[0].v !== null && r.c[0].v !== undefined) {
+                        let formattedNum = formatTwoDigits(r.c[0].v);
+                        let animalB = (r.c[1] && r.c[1].v !== null && r.c[1].v !== undefined) ? String(r.c[1].v).trim() : '';
+                        let animalE = (r.c[4] && r.c[4].v !== null && r.c[4].v !== undefined) ? String(r.c[4].v).trim() : '';
+                        
+                        if (formattedNum) {
+                            if (animalB) duLieuMapB[formattedNum] = animalB;
+                            if (animalE) duLieuMapE[formattedNum] = animalE;
+                        }
+                    }
+                });
+            }
+
+            const rawKQ = await fetchJSONP(URL_KQ);
+            const rows = rawKQ.table.rows;
+            let parsedList = [];
+            let lastXRowIndex = -1;
+
+            if (rows) {
+                for (let i = 0; i < rows.length; i++) {
+                    const r = rows[i].c;
+                    if (!r) continue;
+
+                    let isXRow = false;
+                    for (let colIdx = 1; colIdx <= 7; colIdx++) {
+                        if (r[colIdx] && r[colIdx].v !== null && r[colIdx].v !== undefined) {
+                            if (String(r[colIdx].v).trim().toLowerCase() === 'x') {
+                                isXRow = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isXRow) {
+                        lastXRowIndex = i;
+                        continue;
+                    }
+
+                    if (!r[0] || r[0].v === null || r[0].v === undefined) continue;
+
+                    let kyRaw = String(r[0].v).trim();
+                    let kyOnlyNum = parseInt(kyRaw.replace(/\D/g, ''), 10) || 0;
+                    
+                    let numTeFormatted = '';
+                    if (r[7] && r[7].v !== null && r[7].v !== undefined) {
+                        let valStr = String(r[7].v).trim();
+                        if (valStr !== '' && valStr !== '0' && valStr !== '00') {
+                            numTeFormatted = formatTwoDigits(valStr);
+                        }
+                    }
+
+                    if (kyOnlyNum > 0) {
+                        parsedList.push({
+                            rowIndex: i,
+                            kyNum: kyOnlyNum,
+                            numTe: numTeFormatted
+                        });
+                    }
+                }
+            }
+
+            let doneList = [];
+            let pendingKyObj = null;
+
+            for (let i = 0; i < parsedList.length; i++) {
+                let item = parsedList[i];
+                let isDone = item.numTe !== '' && item.numTe !== '00';
+                if (isDone) {
+                    item.useMapE = (lastXRowIndex !== -1 && item.rowIndex > lastXRowIndex);
+                    doneList.push(item);
+                } else {
+                    pendingKyObj = item;
+                }
+            }
+
+            let targetPredictKy = 1;
+            if (pendingKyObj) {
+                targetPredictKy = pendingKyObj.kyNum;
+            } else if (doneList.length > 0) {
+                targetPredictKy = doneList[doneList.length - 1].kyNum + 1;
+            }
+
+            let winEntries = [];
+            let consecutiveLosses = 0;
+
+            for (let i = doneList.length - 1; i >= 0; i--) {
+                let item = doneList[i];
+                let predicted = getPredictForKy(item.kyNum);
+
+                let activeMap = item.useMapE ? duLieuMapE : duLieuMapB;
+                let actualAnimal = activeMap[item.numTe] || duLieuMapB[item.numTe] || '';
+
+                let hitResult = checkHit(predicted, actualAnimal);
+                
+                if (hitResult.isWin) {
+                    consecutiveLosses = 0;
+                    winEntries.push({ item, predicted, actualAnimal, hit1: hitResult.hit1, hit2: hitResult.hit2 });
+                    if (winEntries.length === 14) {
+                        break;
+                    }
+                } else {
+                    consecutiveLosses++;
+                    if (consecutiveLosses >= 3) {
+                        break;
+                    }
+                }
+            }
+
+            let nextKyNum = targetPredictKy;
+            let predictNext = getPredictForKy(nextKyNum);
+            let kyStrNext = formatThreeDigits(nextKyNum);
+
+            let htmlNextKy = buildLineHtml(kyStrNext, predictNext, "？00");
+
+            let historyOutputs = [];
+
+            for (let i = 0; i < winEntries.length; i++) {
+                let entry = winEntries[i];
+                let resStrWin = entry.actualAnimal + entry.item.numTe;
+                let kyStr = formatThreeDigits(entry.item.kyNum);
+                
+                let parts = entry.predicted.split('+');
+                let part1Html = entry.hit1 ? `<span class="win-digit">${parts[0]}</span>` : parts[0];
+                
+                // Xử lý riêng vế 2: chỉ bôi màu con giáp trúng thưởng
+                let part2Str = parts[1] || "";
+                let part2Html = "";
+                if (entry.hit2 && entry.actualAnimal) {
+                    for (let char of part2Str) {
+                        if (char === entry.actualAnimal) {
+                            part2Html += `<span class="win-digit">${char}</span>`;
+                        } else {
+                            part2Html += char;
+                        }
+                    }
+                } else {
+                    part2Html = part2Str;
+                }
+                
+                // Ghép vế 1 và vế 2, dấu cộng giữ nguyên
+                let formattedPredictHtml = `${part1Html}+${part2Html}`;
+
+                historyOutputs.push(buildLineHtml(kyStr, formattedPredictHtml, resStrWin));
+            }
+
+            let finalOutputs = [htmlNextKy, ...historyOutputs];
+
+            // Nếu trượt liên tiếp 3 kỳ, áp dụng kỳ mặc định 發發+發發
+            let currentCount = finalOutputs.length;
+            if (currentCount === 1) {
+                let kyStr1 = formatThreeDigits(nextKyNum + 1);
+                let kyStr2 = formatThreeDigits(nextKyNum + 2);
+                let defaultHtml1 = buildLineHtml(kyStr1, "發發+發發", "？00");
+                let defaultHtml2 = buildLineHtml(kyStr2, "發發+發發", "？00");
+                finalOutputs.unshift(defaultHtml1);
+                finalOutputs.unshift(defaultHtml2);
+            } else if (currentCount === 2) {
+                let kyStrExtra = formatThreeDigits(nextKyNum + 1);
+                let defaultHtmlExtra = buildLineHtml(kyStrExtra, "發發+發發", "？00");
+                finalOutputs.unshift(defaultHtmlExtra);
+            }
+
+            document.getElementById('content-container').innerHTML = finalOutputs.join('');
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('content-container').innerHTML = '';
+        }
+    }
+    initPredict();
+</script>
+
+</body>
+</html>
