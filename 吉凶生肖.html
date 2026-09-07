@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>吉凶生肖</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 5px;
+            background-color: #fff;
+            color: #000;
+        }
+        .content {
+            font-size: 16px;
+            line-height: 1.2;
+        }
+        .win-digit {
+            background-color: yellow;
+            color: #FF0000;
+        }
+        .line-p {
+            font-family: 宋体;
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 25px;
+            margin: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+<div id="content-container" class="content"></div>
+
+<script>
+    const SPREADSHEET_ID = '19wtMwveTJ_eW09pp7ANQj1NkLNbHIA4kWLsoNAk5Xd8';
+    const SHEET_NAME_KQ = 'KQ_XIANGGANG';
+    const SHEET_NAME_DULIEU = 'DULIEU';
+
+    const URL_KQ = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_KQ}&_=${Date.now()}`;
+    const URL_DULIEU = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_DULIEU}&_=${Date.now()}`;
+
+    let duLieuMapB = {};
+    let duLieuMapE = {};
+
+    // Phân loại con giáp vào 吉美 và 凶丑
+    const JI_MEI = ["兔", "龙", "蛇", "马", "羊", "鸡"];
+    const XIONG_CHOU = ["鼠", "牛", "虎", "猴", "狗", "猪"];
+
+    // Danh sách 366 kỳ dự đoán cố định (Đã thay 大数 -> 吉美, 小数 -> 凶丑)
+    const STATIC_PREDICTIONS = {
+        1: "凶丑", 2: "吉美", 3: "吉美", 4: "凶丑", 5: "凶丑", 6: "吉美", 7: "吉美", 8: "凶丑", 9: "凶丑", 10: "吉美",
+        11: "吉美", 12: "凶丑", 13: "吉美", 14: "吉美", 15: "凶丑", 16: "凶丑", 17: "吉美", 18: "凶丑", 19: "凶丑", 20: "吉美",
+        21: "凶丑", 22: "吉美", 23: "凶丑", 24: "吉美", 25: "凶丑", 26: "凶丑", 27: "吉美", 28: "凶丑", 29: "吉美", 30: "凶丑",
+        31: "凶丑", 32: "吉美", 33: "吉美", 34: "凶丑", 35: "吉美", 36: "吉美", 37: "凶丑", 38: "凶丑", 39: "吉美", 40: "凶丑",
+        41: "凶丑", 42: "吉美", 43: "吉美", 44: "凶丑", 45: "凶丑", 46: "吉美", 47: "吉美", 48: "凶丑", 49: "吉美", 50: "凶丑",
+        51: "吉美", 52: "凶丑", 53: "凶丑", 54: "吉美", 55: "凶丑", 56: "凶丑", 57: "吉美", 58: "吉美", 59: "凶丑", 60: "吉美",
+        61: "吉美", 62: "凶丑", 63: "凶丑", 64: "吉美", 65: "凶丑", 66: "凶丑", 67: "吉美", 68: "吉美", 69: "凶丑", 70: "吉美",
+        71: "凶丑", 72: "凶丑", 73: "吉美", 74: "凶丑", 75: "吉美", 76: "吉美", 77: "凶丑", 78: "吉美", 79: "吉美", 80: "凶丑",
+        81: "吉美", 82: "凶丑", 83: "吉美", 84: "凶丑", 85: "吉美", 86: "吉美", 87: "凶丑", 88: "吉美", 89: "吉美", 90: "凶丑",
+        91: "吉美", 92: "凶丑", 93: "吉美", 94: "吉美", 95: "凶丑", 96: "吉美", 97: "凶丑", 98: "吉美", 99: "凶丑", 100: "吉美",
+        101: "凶丑", 102: "凶丑", 103: "吉美", 104: "吉美", 105: "凶丑", 106: "凶丑", 107: "吉美", 108: "吉美", 109: "凶丑", 110: "凶丑",
+        111: "吉美", 112: "吉美", 113: "凶丑", 114: "吉美", 115: "吉美", 116: "凶丑", 117: "凶丑", 118: "吉美", 119: "吉美", 120: "凶丑",
+        121: "凶丑", 122: "吉美", 123: "凶丑", 124: "凶丑", 125: "吉美", 126: "凶丑", 127: "凶丑", 128: "吉美", 129: "吉美", 130: "凶丑",
+        131: "吉美", 132: "吉美", 133: "凶丑", 134: "凶丑", 135: "吉美", 136: "凶丑", 137: "凶丑", 138: "吉美", 139: "凶丑", 140: "吉美",
+        141: "吉美", 142: "凶丑", 143: "吉美", 144: "吉美", 145: "凶丑", 146: "吉美", 147: "凶丑", 148: "吉美", 149: "凶丑", 150: "凶丑",
+        151: "吉美", 152: "凶丑", 153: "吉美", 154: "凶丑", 155: "吉美", 156: "吉美", 157: "凶丑", 158: "吉美", 159: "吉美", 160: "凶丑",
+        161: "吉美", 162: "凶丑", 163: "凶丑", 164: "吉美", 165: "吉美", 166: "凶丑", 167: "凶丑", 168: "吉美", 169: "吉美", 170: "凶丑",
+        171: "吉美", 172: "吉美", 173: "凶丑", 174: "吉美", 175: "凶丑", 176: "吉美", 177: "吉美", 178: "凶丑", 179: "吉美", 180: "吉美",
+        181: "凶丑", 182: "吉美", 183: "吉美", 184: "凶丑", 185: "吉美", 186: "凶丑", 187: "吉美", 188: "吉美", 189: "凶丑", 190: "凶丑",
+        191: "吉美", 192: "凶丑", 193: "凶丑", 194: "吉美", 195: "吉美", 196: "凶丑", 197: "吉美", 198: "凶丑", 199: "凶丑", 200: "吉美",
+        201: "凶丑", 202: "吉美", 203: "凶丑", 204: "凶丑", 205: "吉美", 206: "吉美", 207: "凶丑", 208: "凶丑", 209: "吉美", 210: "凶丑",
+        211: "吉美", 212: "吉美", 213: "凶丑", 214: "吉美", 215: "凶丑", 216: "凶丑", 217: "吉美", 218: "凶丑", 219: "吉美", 220: "凶丑",
+        221: "凶丑", 222: "吉美", 223: "凶丑", 224: "凶丑", 225: "吉美", 226: "吉美", 227: "凶丑", 228: "凶丑", 229: "吉美", 230: "凶丑",
+        231: "吉美", 232: "吉美", 233: "凶丑", 234: "凶丑", 235: "吉美", 236: "吉美", 237: "凶丑", 238: "吉美", 239: "吉美", 240: "凶丑",
+        241: "凶丑", 242: "吉美", 243: "吉美", 244: "凶丑", 245: "凶丑", 246: "吉美", 247: "吉美", 248: "凶丑", 249: "吉美", 250: "凶丑",
+        251: "吉美", 252: "凶丑", 253: "吉美", 254: "凶丑", 255: "吉美", 256: "吉美", 257: "凶丑", 258: "凶丑", 259: "吉美", 260: "吉美",
+        261: "凶丑", 262: "吉美", 263: "凶丑", 264: "吉美", 265: "吉美", 266: "凶丑", 267: "吉美", 268: "吉美", 269: "凶丑", 270: "凶丑",
+        271: "吉美", 272: "吉美", 273: "凶丑", 274: "吉美", 275: "凶丑", 276: "凶丑", 277: "吉美", 278: "凶丑", 279: "吉美", 280: "吉美",
+        281: "凶丑", 282: "吉美", 283: "吉美", 284: "凶丑", 285: "凶丑", 286: "吉美", 287: "凶丑", 288: "吉美", 289: "凶丑", 290: "吉美",
+        291: "吉美", 292: "凶丑", 293: "吉美", 294: "凶丑", 295: "吉美", 296: "凶丑", 297: "吉美", 298: "凶丑", 299: "凶丑", 300: "吉美",
+        301: "凶丑", 302: "凶丑", 303: "吉美", 304: "吉美", 305: "凶丑", 306: "凶丑", 307: "吉美", 308: "凶丑", 309: "凶丑", 310: "吉美",
+        311: "凶丑", 312: "凶丑", 313: "吉美", 314: "凶丑", 315: "吉美", 316: "吉美", 317: "凶丑", 318: "凶丑", 319: "吉美", 320: "凶丑",
+        321: "凶丑", 322: "吉美", 323: "吉美", 324: "凶丑", 325: "凶丑", 326: "吉美", 327: "凶丑", 328: "凶丑", 329: "吉美", 330: "吉美",
+        331: "凶丑", 332: "凶丑", 333: "吉美", 334: "凶丑", 335: "凶丑", 336: "吉美", 337: "吉美", 338: "凶丑", 339: "吉美", 340: "吉美",
+        341: "凶丑", 342: "凶丑", 343: "吉美", 344: "凶丑", 345: "凶丑", 346: "吉美", 347: "吉美", 348: "凶丑", 349: "凶丑", 350: "吉美",
+        351: "凶丑", 352: "吉美", 353: "吉美", 354: "凶丑", 355: "凶丑", 356: "吉美", 357: "吉美", 358: "凶丑", 359: "吉美", 360: "吉美",
+        361: "凶丑", 362: "吉美", 363: "凶丑", 364: "吉美", 365: "凶丑", 366: "吉美"
+    };
+
+    function fetchJSONP(url) {
+        return fetch(url)
+            .then(res => res.text())
+            .then(text => {
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+                if (match && match[1]) return JSON.parse(match[1]);
+                throw new Error("Cannot parse JSONP response");
+            });
+    }
+
+    function getPredictChoiceForKy(kyNum) {
+        let actualKy = ((kyNum - 1) % 366) + 1;
+        if (STATIC_PREDICTIONS[actualKy]) {
+            return STATIC_PREDICTIONS[actualKy];
+        }
+        let cycle = Math.floor((actualKy - 1) / 2);
+        return cycle % 2 === 0 ? "吉美" : "凶丑";
+    }
+
+    function getGroupOfAnimal(animalStr) {
+        if (JI_MEI.includes(animalStr)) return "吉美";
+        if (XIONG_CHOU.includes(animalStr)) return "凶丑";
+        return "";
+    }
+
+    function formatTwoDigits(val) {
+        let cleanVal = String(val).trim();
+        let num = parseInt(cleanVal.replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '';
+        return String(num).padStart(2, '0');
+    }
+
+    function formatThreeDigits(val) {
+        let num = parseInt(String(val).replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '001';
+        return String(num).padStart(3, '0');
+    }
+
+    // Tạo HTML chuẩn theo định dạng mã mẫu đã cung cấp
+    function buildLineHtml(kyStr, choiceHtml, resultStr) {
+        return `<p class="line-p">${kyStr}期:<span style="color:#800000;">吉凶生肖</span>【<span style="color:#FF0000;">${choiceHtml}</span>】開:<span style="color:#FF0000;">${resultStr}</span><span style="color:#0000FF;">中</span></p>`;
+    }
+
+    async function initPredict() {
+        try {
+            const rawRules = await fetchJSONP(URL_DULIEU);
+            if (rawRules.table && rawRules.table.rows) {
+                rawRules.table.rows.forEach(r => {
+                    if (r.c && r.c[0] && r.c[0].v !== null && r.c[0].v !== undefined) {
+                        let formattedNum = formatTwoDigits(r.c[0].v);
+                        let animalB = (r.c[1] && r.c[1].v !== null && r.c[1].v !== undefined) ? String(r.c[1].v).trim() : '';
+                        let animalE = (r.c[4] && r.c[4].v !== null && r.c[4].v !== undefined) ? String(r.c[4].v).trim() : '';
+                        
+                        if (formattedNum) {
+                            if (animalB) duLieuMapB[formattedNum] = animalB;
+                            if (animalE) duLieuMapE[formattedNum] = animalE;
+                        }
+                    }
+                });
+            }
+
+            const rawKQ = await fetchJSONP(URL_KQ);
+            const rows = rawKQ.table.rows;
+            let parsedList = [];
+            let lastXRowIndex = -1;
+
+            if (rows) {
+                for (let i = 0; i < rows.length; i++) {
+                    const r = rows[i].c;
+                    if (!r) continue;
+
+                    let isXRow = false;
+                    for (let colIdx = 1; colIdx <= 7; colIdx++) {
+                        if (r[colIdx] && r[colIdx].v !== null && r[colIdx].v !== undefined) {
+                            if (String(r[colIdx].v).trim().toLowerCase() === 'x') {
+                                isXRow = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (isXRow) {
+                        lastXRowIndex = i;
+                        continue;
+                    }
+
+                    if (!r[0] || r[0].v === null || r[0].v === undefined) continue;
+
+                    let kyRaw = String(r[0].v).trim();
+                    let kyOnlyNum = parseInt(kyRaw.replace(/\D/g, ''), 10) || 0;
+                    
+                    let numTeFormatted = '';
+                    if (r[7] && r[7].v !== null && r[7].v !== undefined) {
+                        let valStr = String(r[7].v).trim();
+                        if (valStr !== '' && valStr !== '0' && valStr !== '00') {
+                            numTeFormatted = formatTwoDigits(valStr);
+                        }
+                    }
+
+                    if (kyOnlyNum > 0) {
+                        parsedList.push({
+                            rowIndex: i,
+                            kyNum: kyOnlyNum,
+                            numTe: numTeFormatted
+                        });
+                    }
+                }
+            }
+
+            let doneList = [];
+            let pendingKyObj = null;
+
+            for (let i = 0; i < parsedList.length; i++) {
+                let item = parsedList[i];
+                let isDone = item.numTe !== '' && item.numTe !== '00';
+                if (isDone) {
+                    item.useMapE = (lastXRowIndex !== -1 && item.rowIndex > lastXRowIndex);
+                    doneList.push(item);
+                } else {
+                    pendingKyObj = item;
+                }
+            }
+
+            let targetPredictKy = 1;
+            if (pendingKyObj) {
+                targetPredictKy = pendingKyObj.kyNum;
+            } else if (doneList.length > 0) {
+                targetPredictKy = doneList[doneList.length - 1].kyNum + 1;
+            }
+
+            let winEntries = [];
+            let consecutiveLosses = 0;
+
+            for (let i = doneList.length - 1; i >= 0; i--) {
+                let item = doneList[i];
+                let predicted = getPredictChoiceForKy(item.kyNum);
+                
+                let activeMap = item.useMapE ? duLieuMapE : duLieuMapB;
+                let actualAnimal = activeMap[item.numTe] || duLieuMapB[item.numTe] || '';
+                let actualGroup = getGroupOfAnimal(actualAnimal);
+
+                let isWin = actualGroup && (predicted === actualGroup);
+                
+                if (isWin) {
+                    consecutiveLosses = 0;
+                    winEntries.push({ item, predicted, actualAnimal });
+                    if (winEntries.length === 14) {
+                        break;
+                    }
+                } else {
+                    consecutiveLosses++;
+                    if (consecutiveLosses >= 3) {
+                        break;
+                    }
+                }
+            }
+
+            let nextKyNum = targetPredictKy;
+            let predictNext = getPredictChoiceForKy(nextKyNum);
+            let kyStrNext = formatThreeDigits(nextKyNum);
+
+            let htmlNextKy = buildLineHtml(kyStrNext, predictNext, "？00");
+
+            let historyOutputs = [];
+
+            for (let i = 0; i < winEntries.length; i++) {
+                let entry = winEntries[i];
+                let resStrWin = entry.actualAnimal + entry.item.numTe;
+                let kyStr = formatThreeDigits(entry.item.kyNum);
+                
+                // Chỉ bôi vàng nền, chữ đỏ cho lựa chọn dự đoán TRÚNG
+                let formattedPredictHtml = `<span class="win-digit">${entry.predicted}</span>`;
+                historyOutputs.push(buildLineHtml(kyStr, formattedPredictHtml, resStrWin));
+            }
+
+            let finalOutputs = [htmlNextKy, ...historyOutputs];
+
+            // Khi trượt quá 3 kỳ, dự đoán lại từ mới nhất và áp dụng kỳ mặc định 發發
+            let currentCount = finalOutputs.length;
+            if (currentCount === 1) {
+                let kyStr1 = formatThreeDigits(nextKyNum + 1);
+                let kyStr2 = formatThreeDigits(nextKyNum + 2);
+                let defaultHtml1 = buildLineHtml(kyStr1, "發發", "？00");
+                let defaultHtml2 = buildLineHtml(kyStr2, "發發", "？00");
+                finalOutputs.unshift(defaultHtml1);
+                finalOutputs.unshift(defaultHtml2);
+            } else if (currentCount === 2) {
+                let kyStrExtra = formatThreeDigits(nextKyNum + 1);
+                let defaultHtmlExtra = buildLineHtml(kyStrExtra, "發發", "？00");
+                finalOutputs.unshift(defaultHtmlExtra);
+            }
+
+            document.getElementById('content-container').innerHTML = finalOutputs.join('');
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('content-container').innerHTML = '';
+        }
+    }
+    initPredict();
+</script>
+
+</body>
+</html>
