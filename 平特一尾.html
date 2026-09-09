@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>平特一尾</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 5px;
+            background-color: #fff;
+            color: #000;
+        }
+        .content {
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .win-animal {
+            color: #FF0000;
+            background-color: yellow;
+        }
+    </style>
+</head>
+<body>
+
+<div id="content-container" class="content"></div>
+
+<script>
+    const SPREADSHEET_ID = '19wtMwveTJ_eW09pp7ANQj1NkLNbHIA4kWLsoNAk5Xd8';
+    const SHEET_NAME_KQ = 'KQ_XIANGGANG';
+    const SHEET_NAME_DULIEU = 'DULIEU';
+
+    const URL_KQ = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_KQ}&_=${Date.now()}`;
+    const URL_DULIEU = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${SHEET_NAME_DULIEU}&_=${Date.now()}`;
+
+    let duLieuMap = {};
+
+    // Danh sách dự đoán cố định 366 kỳ (đã cập nhật lặp lại 6 lần)
+    const STATIC_PREDICTIONS = {
+        1: "111111", 2: "777777", 3: "555555", 4: "666666", 5: "888888", 6: "222222", 7: "000000", 8: "111111", 9: "777777", 10: "444444",
+        11: "666666", 12: "555555", 13: "888888", 14: "777777", 15: "000000", 16: "444444", 17: "111111", 18: "555555", 19: "333333", 20: "888888",
+        21: "222222", 22: "111111", 23: "999999", 24: "777777", 25: "666666", 26: "222222", 27: "111111", 28: "888888", 29: "333333", 30: "000000",
+        31: "555555", 32: "444444", 33: "777777", 34: "222222", 35: "000000", 36: "888888", 37: "444444", 38: "111111", 39: "333333", 40: "000000",
+        41: "555555", 42: "222222", 43: "666666", 44: "444444", 45: "999999", 46: "111111", 47: "888888", 48: "333333", 49: "000000", 50: "444444",
+        51: "999999", 52: "111111", 53: "555555", 54: "000000", 55: "888888", 56: "333333", 57: "111111", 58: "444444", 59: "222222", 60: "777777",
+        61: "000000", 62: "999999", 63: "111111", 64: "666666", 65: "333333", 66: "222222", 67: "999999", 68: "444444", 69: "777777", 70: "333333",
+        71: "666666", 72: "888888", 73: "000000", 74: "444444", 75: "555555", 76: "222222", 77: "111111", 78: "888888", 79: "666666", 80: "333333",
+        81: "999999", 82: "000000", 83: "555555", 84: "666666", 85: "222222", 86: "333333", 87: "000000", 88: "999999", 89: "111111", 90: "666666",
+        91: "444444", 92: "333333", 93: "888888", 94: "999999", 95: "666666", 96: "777777", 97: "444444", 98: "000000", 99: "555555", 100: "333333",
+        101: "888888", 102: "999999", 103: "444444", 104: "666666", 105: "777777", 106: "000000", 107: "111111", 108: "555555", 109: "444444", 110: "888888",
+        111: "333333", 112: "666666", 113: "000000", 114: "999999", 115: "444444", 116: "111111", 117: "777777", 118: "000000", 119: "555555", 120: "888888",
+        121: "111111", 122: "333333", 123: "444444", 124: "999999", 125: "666666", 126: "000000", 127: "333333", 128: "222222", 129: "888888", 130: "444444",
+        131: "666666", 132: "777777", 133: "222222", 134: "000000", 135: "444444", 136: "111111", 137: "999999", 138: "222222", 139: "555555", 140: "444444",
+        141: "666666", 142: "888888", 143: "777777", 144: "555555", 145: "444444", 146: "333333", 147: "666666", 148: "111111", 149: "888888", 150: "000000",
+        151: "222222", 152: "666666", 153: "333333", 154: "444444", 155: "000000", 156: "888888", 157: "777777", 158: "111111", 159: "999999", 160: "444444",
+        161: "333333", 162: "222222", 163: "777777", 164: "666666", 165: "111111", 166: "555555", 167: "888888", 168: "777777", 169: "444444", 170: "333333",
+        171: "999999", 172: "666666", 173: "888888", 174: "111111", 175: "555555", 176: "333333", 177: "666666", 178: "999999", 179: "888888", 180: "222222",
+        181: "444444", 182: "111111", 183: "333333", 184: "555555", 185: "666666", 186: "444444", 187: "111111", 188: "333333", 189: "555555", 190: "666666",
+        191: "444444", 192: "222222", 193: "333333", 194: "111111", 195: "000000", 196: "666666", 197: "999999", 198: "888888", 199: "777777", 200: "444444",
+        201: "999999", 202: "888888", 203: "777777", 204: "444444", 205: "333333", 206: "111111", 207: "222222", 208: "888888", 209: "444444", 210: "555555",
+        211: "111111", 212: "222222", 213: "888888", 214: "333333", 215: "666666", 216: "555555", 217: "999999", 218: "777777", 219: "222222", 220: "000000",
+        221: "444444", 222: "888888", 223: "111111", 224: "555555", 225: "777777", 226: "444444", 227: "222222", 228: "111111", 229: "666666", 230: "777777",
+        231: "444444", 232: "000000", 233: "333333", 234: "888888", 235: "999999", 236: "444444", 237: "111111", 238: "333333", 239: "666666", 240: "222222",
+        241: "000000", 242: "888888", 243: "333333", 244: "777777", 245: "666666", 246: "111111", 247: "444444", 248: "888888", 249: "222222", 250: "555555",
+        251: "777777", 252: "111111", 253: "444444", 254: "333333", 255: "999999", 256: "000000", 257: "222222", 258: "666666", 259: "555555", 260: "777777",
+        261: "111111", 262: "333333", 263: "888888", 264: "444444", 265: "222222", 266: "777777", 267: "555555", 268: "000000", 269: "666666", 270: "888888",
+        271: "999999", 272: "555555", 273: "333333", 274: "666666", 275: "777777", 276: "111111", 277: "000000", 278: "999999", 279: "333333", 280: "444444",
+        281: "888888", 282: "777777", 283: "222222", 284: "111111", 285: "666666", 286: "444444", 287: "999999", 288: "777777", 289: "555555", 290: "222222",
+        291: "444444", 292: "000000", 293: "333333", 294: "111111", 295: "999999", 296: "666666", 297: "888888", 298: "777777", 299: "333333", 300: "000000",
+        301: "111111", 302: "888888", 303: "777777", 304: "999999", 305: "666666", 306: "222222", 307: "333333", 308: "444444", 309: "888888", 310: "999999",
+        311: "000000", 312: "555555", 313: "222222", 314: "333333", 315: "999999", 316: "888888", 317: "666666", 318: "555555", 319: "000000", 320: "777777",
+        321: "222222", 322: "999999", 323: "666666", 324: "888888", 325: "444444", 326: "333333", 327: "999999", 328: "555555", 329: "777777", 330: "444444",
+        331: "111111", 332: "222222", 333: "555555", 334: "777777", 335: "999999", 336: "000000", 337: "666666", 338: "111111", 339: "222222", 340: "999999",
+        341: "555555", 342: "888888", 343: "000000", 344: "444444", 345: "777777", 346: "555555", 347: "111111", 348: "666666", 349: "444444", 350: "777777",
+        351: "555555", 352: "111111", 353: "222222", 354: "000000", 355: "888888", 356: "444444", 357: "111111", 358: "222222", 359: "666666", 360: "777777",
+        361: "444444", 362: "111111", 363: "555555", 364: "222222", 365: "888888", 366: "777777"
+    };
+
+    function fetchJSONP(url) {
+        return fetch(url)
+            .then(res => res.text())
+            .then(text => {
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/);
+                if (match && match[1]) return JSON.parse(match[1]);
+                throw new Error(" ");
+            });
+    }
+
+    function getPredictForKy(kyNum) {
+        let actualKy = ((kyNum - 1) % 366) + 1;
+        return STATIC_PREDICTIONS[actualKy] || "000000";
+    }
+
+    function formatTwoDigits(val) {
+        let cleanVal = String(val).trim();
+        let num = parseInt(cleanVal.replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '';
+        return String(num).padStart(2, '0');
+    }
+
+    function formatThreeDigits(val) {
+        let num = parseInt(String(val).replace(/\D/g, ''), 10);
+        if (isNaN(num)) return '001';
+        return String(num).padStart(3, '0');
+    }
+
+    async function initPredict() {
+        try {
+            const rawKQ = await fetchJSONP(URL_KQ);
+            const rowsKQ = rawKQ.table ? rawKQ.table.rows : [];
+
+            // Kiểm tra xem bảng KQ có chứa ký tự 'x' hoặc 'X' hay không
+            let hasX = false;
+            if (rowsKQ) {
+                for (let r of rowsKQ) {
+                    if (r.c) {
+                        for (let cell of r.c) {
+                            if (cell && cell.v !== null && cell.v !== undefined) {
+                                if (String(cell.v).toLowerCase().includes('x')) {
+                                    hasX = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    if (hasX) break;
+                }
+            }
+
+            // Chọn cột chứa con giáp trong bảng DULIEU: nếu có 'x'/'X' chọn Cột E (index 4), ngược lại chọn Cột B (index 1)
+            let animalColIndex = hasX ? 4 : 1;
+
+            // Lấy dữ liệu map số -> con giáp từ sheet DULIEU
+            const rawRules = await fetchJSONP(URL_DULIEU);
+            if (rawRules.table && rawRules.table.rows) {
+                rawRules.table.rows.forEach(r => {
+                    if (r.c && r.c[0] && r.c[0].v !== null && r.c[0].v !== undefined) {
+                        let formattedNum = formatTwoDigits(r.c[0].v);
+                        let animalCell = r.c[animalColIndex];
+                        let animal = (animalCell && animalCell.v !== null && animalCell.v !== undefined) ? String(animalCell.v).trim() : '';
+                        if (formattedNum && animal) {
+                            duLieuMap[formattedNum] = animal;
+                        }
+                    }
+                });
+            }
+
+            let parsedList = [];
+            if (rowsKQ) {
+                for (let i = 0; i < rowsKQ.length; i++) {
+                    const r = rowsKQ[i].c;
+                    if (!r || !r[0] || r[0].v === null || r[0].v === undefined) continue;
+                    
+                    let kyRaw = String(r[0].v).trim();
+                    let kyOnlyNum = parseInt(kyRaw.replace(/\D/g, ''), 10) || 0;
+                    
+                    // Thứ tự ưu tiên: Cột 7 (Giải ĐB) -> Cột 1 đến 6 (Giải 1 -> 6)
+                    let orderedColumns = [7, 1, 2, 3, 4, 5, 6];
+                    let numbersInDraw = [];
+
+                    for (let colIdx of orderedColumns) {
+                        if (r[colIdx] && r[colIdx].v !== null && r[colIdx].v !== undefined) {
+                            let valStr = String(r[colIdx].v).trim();
+                            if (valStr !== '' && valStr !== '0' && valStr !== '00') {
+                                let formatted = formatTwoDigits(valStr);
+                                if (formatted) {
+                                    numbersInDraw.push(formatted);
+                                }
+                            }
+                        }
+                    }
+
+                    if (kyOnlyNum > 0) {
+                        parsedList.push({
+                            kyNum: kyOnlyNum,
+                            drawNumbers: numbersInDraw
+                        });
+                    }
+                }
+            }
+
+            let doneList = [];
+            let pendingKyObj = null;
+
+            for (let i = 0; i < parsedList.length; i++) {
+                let item = parsedList[i];
+                let isDone = item.drawNumbers && item.drawNumbers.length > 0;
+                if (isDone) {
+                    doneList.push(item);
+                } else {
+                    pendingKyObj = item;
+                }
+            }
+
+            let targetPredictKy = 1;
+            if (pendingKyObj) {
+                targetPredictKy = pendingKyObj.kyNum;
+            } else if (doneList.length > 0) {
+                targetPredictKy = doneList[doneList.length - 1].kyNum + 1;
+            }
+
+            let evaluatedDoneList = [];
+            for (let i = 0; i < doneList.length; i++) {
+                let item = doneList[i];
+                let predicted = getPredictForKy(item.kyNum);
+                let targetTail = predicted[0];
+                let isWin = false;
+                let winNumber = "";
+                let winAnimal = "";
+
+                // Ưu tiên kiểm tra từ Giải ĐB -> Giải 6
+                for (let numStr of item.drawNumbers) {
+                    let numInt = parseInt(numStr, 10);
+                    // Chỉ xét các số trong phạm vi từ 01 đến 49
+                    if (numInt >= 1 && numInt <= 49) {
+                        let lastDigit = numStr.slice(-1);
+                        if (lastDigit === targetTail) {
+                            isWin = true;
+                            winNumber = numStr;
+                            winAnimal = duLieuMap[numStr] || '';
+                            break;
+                        }
+                    }
+                }
+                
+                evaluatedDoneList.push({ item, isWin, predicted, targetTail, winNumber, winAnimal });
+            }
+
+            let checkLatestMisses = 0;
+            for (let i = evaluatedDoneList.length - 1; i >= 0; i--) {
+                if (!evaluatedDoneList[i].isWin) {
+                    checkLatestMisses++;
+                } else {
+                    break;
+                }
+            }
+
+            let cutoffIndex = 0;
+            if (checkLatestMisses < 3) {
+                let consecutiveMisses = 0;
+                for (let i = evaluatedDoneList.length - 1; i >= 0; i--) {
+                    if (!evaluatedDoneList[i].isWin) {
+                        consecutiveMisses++;
+                        if (consecutiveMisses >= 3) {
+                            cutoffIndex = i + 1;
+                            break;
+                        }
+                    } else {
+                        consecutiveMisses = 0;
+                    }
+                }
+            } else {
+                cutoffIndex = evaluatedDoneList.length;
+            }
+
+            let nextKyNum = targetPredictKy;
+            let predictNext = getPredictForKy(nextKyNum);
+            let kyStrNext = formatThreeDigits(nextKyNum);
+
+            // Định dạng mã HTML chuẩn theo mã mẫu bạn cung cấp
+            let htmlNextKy = `<p style="font-family:宋体;font-size:16px;line-height:25px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStrNext}期:平特一尾〓<span style="color:#0000FF;">${predictNext}〓</span>开:<span style="color:#FF0000;">？00</span>对</p>`;
+
+            let historyOutputs = [];
+            if (checkLatestMisses < 3) {
+                for (let i = cutoffIndex; i < evaluatedDoneList.length; i++) {
+                    let evalItem = evaluatedDoneList[i];
+                    let item = evalItem.item;
+
+                    if (evalItem.isWin) {
+                        let predicted = getPredictForKy(item.kyNum);
+                        let kyStr = formatThreeDigits(item.kyNum);
+                        let resStrWin = evalItem.winAnimal + evalItem.winNumber;
+
+                        let formattedPredictHtml = `<span class="win-animal">${predicted}</span>`;
+                        historyOutputs.push(`<p style="font-family:宋体;font-size:16px;line-height:25px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStr}期:平特一尾〓<span style="color:#0000FF;">${formattedPredictHtml}〓</span>开:<span style="color:#FF0000;">${resStrWin}</span>对</p>`);
+                    }
+                }
+            }
+
+            historyOutputs.reverse();
+
+            // Giới hạn tối đa 14 kỳ trúng + 1 kỳ dự đoán mới = 15 kỳ
+            if (historyOutputs.length > 14) {
+                historyOutputs = historyOutputs.slice(0, 14);
+            }
+
+            let finalOutputs = [htmlNextKy, ...historyOutputs];
+
+            let currentCount = finalOutputs.length;
+            if (currentCount === 1) {
+                let kyStr1 = formatThreeDigits(nextKyNum + 1);
+                let kyStr2 = formatThreeDigits(nextKyNum + 2);
+                let defaultHtml1 = `<p style="font-family:宋体;font-size:16px;line-height:25px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStr1}期:平特一尾〓<span style="color:#0000FF;">$$$$$$〓</span>开:<span style="color:#FF0000;">？00</span>对</p>`;
+                let defaultHtml2 = `<p style="font-family:宋体;font-size:16px;line-height:25px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStr2}期:平特一尾〓<span style="color:#0000FF;">$$$$$$〓</span>开:<span style="color:#FF0000;">？00</span>对</p>`;
+                finalOutputs.unshift(defaultHtml1);
+                finalOutputs.unshift(defaultHtml2);
+            } else if (currentCount === 2) {
+                let kyStrExtra = formatThreeDigits(nextKyNum + 1);
+                let defaultHtmlExtra = `<p style="font-family:宋体;font-size:16px;line-height:25px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${kyStrExtra}期:平特一尾〓<span style="color:#0000FF;">$$$$$$〓</span>开:<span style="color:#FF0000;">？00</span>对</p>`;
+                finalOutputs.unshift(defaultHtmlExtra);
+            }
+
+            document.getElementById('content-container').innerHTML = finalOutputs.join('');
+
+        } catch (err) {
+            console.error(err);
+            document.getElementById('content-container').innerHTML = ' ';
+        }
+    }
+    initPredict();
+</script>
+
+</body>
+</html>
